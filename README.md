@@ -7,27 +7,25 @@
 **Distribution license: [GPL-3.0-only](LICENSE).** Original third-party notices
 are retained separately; they are not alternative licenses for the complete fork.
 
-**Release candidate: 1.0.0-rc.1.** The canonical version is in [VERSION](VERSION).
-Build/package/resource metadata distinguishes this candidate from a stable
-1.0.0 release. See [Release preparation](docs/RELEASE.md).
+**Version: 1.0.1.** The canonical version is in [VERSION](VERSION).
+CMake, installed packages and DLL resources use 1.0.1 without a prerelease
+suffix or prerelease opt-in. See [Release preparation](docs/RELEASE.md).
 
 MithrilHook is an independently maintained Windows x86/x64 function-hooking
 library derived from MinHook. It has its own **MTH_*** API, build targets,
 package identity and version history. There is no legacy API alias header.
 
-This development candidate integrates strict peer preparation,
+The library integrates strict peer preparation,
 retryable patch completion, generated-code retirement checks and checked
 instruction relocation. **It is not a production acceptance or universal
 unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
 
-The merged baseline through PR #17 passed 196 native Windows/package tests and
-two portable sanitizer tests. A subsequent internal-CALL failure is corrected
-in [PR #18](https://github.com/raleonys/mithrilhook/pull/18) by refusing callee
-destinations inside the entry patch before publication. Release publication
-awaits that correction and its fresh exact-source Windows validation.
-Completed [PR #17](https://github.com/raleonys/mithrilhook/pull/17) benchmark
-results remain pinned to the preceding source.
+The merged baseline through PR #18 passed 210 native Windows/package tests and
+two portable sanitizer tests. [PR #19](https://github.com/raleonys/mithrilhook/pull/19)
+adds the x87 instruction-pointer policy and the requested 1.0.1 version.
+Its Windows execution, refusal, package and DLL checks belong to that exact
+source. Earlier benchmark reports keep their measured commit identities.
 Native hook-engine comparisons retain source-specific reports and raw evidence; see
 [Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 

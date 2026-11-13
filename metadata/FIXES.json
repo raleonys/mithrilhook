@@ -140,6 +140,11 @@
       "id": "F28",
       "change": "Refuse copied relative CALL destinations inside the five-byte entry patch before original publication; preserve ordinary outside CALLs",
       "origin": "MithrilHook review #18; inherited absolute-CALL fixup retains a callee in overwritten source bytes"
+    },
+    {
+      "id": "F29",
+      "change": "Refuse copied x87 operations before FIP can escape through a state save, including beyond the prefix; retain fixed FXSAVE/FXRSTOR without copied producers and refuse extended state layouts",
+      "origin": "MithrilHook review #19; inherited x87 instruction-pointer observation mismatch"
     }
   ],
   "excluded_unreviewed_proposals": {

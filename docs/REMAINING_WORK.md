@@ -1,21 +1,21 @@
 # Release and integration status
 
-The unpublished release candidate is 1.0.0-rc.1. Confirmed reports through
-PR #17 have merged runtime corrections. PR #18 addresses a subsequent confirmed
-internal-CALL failure by refusing overwritten callee destinations before
-publication. Release publication is blocked until that correction and its
-exact-head native/negative-control checks are reviewed. Earlier #17 benchmark
-and package evidence stays pinned to its original source, not these new bytes.
+The selected distribution version is 1.0.1, without an RC suffix. Confirmed
+reports through PR #18 have merged runtime corrections. PR #19 addresses the
+subsequent x87 FIP observation failure and updates all current version/package
+and changelog metadata. Publication awaits review of that correction and its
+fresh exact-source correctness/package evidence. Previous benchmark/package
+records remain pinned to their original bytes.
 
 ## Library release gates
 
 | Gate | Evidence / completion criterion |
 | --- | --- |
-| Correctness and publication | Candidate portable sanitizers and all seven native configurations pass, including genuine PUSH source/generated unwind, overlap reservation, cleanup and exact negative controls. See [Validation](VALIDATION.md). |
-| Installed package and DLL identity | All seven fresh consumers link/run with matching CRT settings; candidate version consent and DLL numeric/full/prerelease metadata match VERSION. |
-| Comparative performance | Review the candidate's exact-head five-environment run, raw recipe/checksums, source/binary identities and recomputed results. Earlier #12 measurements remain historical. See [Benchmarks](BENCHMARKS.md). |
+| Correctness and publication | Current-source portable sanitizers and all seven native configurations pass, including genuine PUSH source/generated unwind, overlap reservation, cleanup and exact negative controls. See [Validation](VALIDATION.md). |
+| Installed package and DLL identity | All seven fresh consumers link/run with matching CRT settings; stable numeric version compatibility and DLL numeric/full/prerelease metadata match VERSION. |
+| Comparative performance | Review the selected source's exact-head five-environment run, raw recipe/checksums, source/binary identities and recomputed results. Earlier #12 measurements remain historical. See [Benchmarks](BENCHMARKS.md). |
 | Release content | Review the changelog, documented support/refusal scope, GPL/BSD provenance and versioned validation artifacts. VERSION and package/resource metadata must agree. |
-| Publication | The owner selects the immutable release commit, tag and assets after reviewing these gates. A release candidate is not a published stable 1.0.0. See [Release preparation](RELEASE.md). |
+| Publication | The owner selects the immutable release commit, tag and assets after reviewing these gates. Setting VERSION does not create a GitHub release or tag. See [Release preparation](RELEASE.md). |
 
 ## Next engineering phase: Citrine integration
 
@@ -30,7 +30,7 @@ results into a game-acceptance claim.
   and verify startup, detour/original behavior and recovery paths.
 - Complete shutdown/DLL unload with every callback drained and all native owners
   retired. This is application acceptance, not a prerequisite for writing an
-  independently versioned library candidate.
+  independently versioned library.
 
 Citrine [native acceptance #20](https://github.com/raleonys/citrine-eclipse-mirage/issues/20),
 [connect error-path #22](https://github.com/raleonys/citrine-eclipse-mirage/issues/22)

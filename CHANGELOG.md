@@ -1,10 +1,9 @@
 # Changelog
 
-The first independent MithrilHook release is being prepared. No published tag
-or release is implied by this file. VERSION is the canonical distribution
-version; the CMake numeric component and Windows fixed version are 1.0.0.
+VERSION is the canonical distribution version. This history groups changes
+by their resulting behavior and links the implementing pull requests.
 
-## [1.0.0-rc.1] — Release candidate, not yet published
+## [1.0.1]
 
 ### Added
 
@@ -22,8 +21,8 @@ version; the CMake numeric component and Windows fixed version are 1.0.0.
   negative controls, binary receipts and recomputed statistics are retained.
 - Independent installed-package consumers across static/shared, Debug/Release,
   MSVC/clang-cl and x64/Win32 builds, with actual hook/original/retirement calls.
-- A canonical VERSION file, full candidate version in package/DLL metadata,
-  Windows prerelease resource flags and versioned validation artifacts.
+- A canonical VERSION file and consistent 1.0.1 CMake/package/DLL metadata,
+  release resource flags and versioned validation artifacts.
 
 ### Fixed
 
@@ -55,13 +54,17 @@ version; the CMake numeric component and Windows fixed version are 1.0.0.
 - Refuse copied relative CALL destinations inside the five-byte entry patch
   before original publication, including valid instruction boundaries. Keep
   ordinary outside CALL execution, generated unwind and retirement. ([#18])
+- Refuse copied x87 operations whose relocated instruction pointer can escape
+  through FNSTENV/FSTENV, FNSAVE/FSAVE or a later state save. Keep fixed-size
+  FXSAVE/FXRSTOR without copied x87 producers and bodies outside the copied
+  prefix. Refuse unproven extended-state layouts before publication. ([#19])
 
 ### Packaging and compatibility
 
-- The installed package exposes the full 1.0.0-rc.1 version. Numeric versioned
-  requests require explicit MithrilHook_ALLOW_PRERELEASE consent for candidates;
-  unversioned discovery is also available. Static/shared consumers retain their
-  matching MSVC runtime configuration.
+- The installed package exposes version 1.0.1 without a prerelease suffix.
+  Numeric requests, including exact 1.0.1, work without prerelease opt-in.
+  CMake and Windows fixed metadata use 1.0.1; DLL prerelease flags are clear.
+  Static/shared consumers retain their matching MSVC runtime configuration.
 - Distribution remains GPL-3.0-only. Original MinHook/HDE BSD notices and the
   separately authorized SAFE-FREEZE notice remain intact; these are not three
   alternative licenses for the full fork. Branding and the approved logo are
@@ -74,15 +77,15 @@ version; the CMake numeric component and Windows fixed version are 1.0.0.
 
 Exact revisions, configurations and completed runs are recorded in
 [Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
-candidate PR [#17]. Earlier results keep their original source identities.
-Library publication is owner-controlled after the candidate's correctness,
+current PR [#19]. Earlier results keep their original source identities.
+Library publication is owner-controlled after the selected source's correctness,
 package, performance and source/license review. Citrine integration and actual
 application/game lifecycle acceptance are the following engineering phase.
 
 ## Development history before the first release
 
-The earlier 0.1.0 CMake identifier represented unpublished development work,
-not a prior stable release. The initial independent core, branding, thread/batch
+The earlier 0.1.0 and 1.0.0-rc.1 identifiers represented development work,
+not prior stable releases. The initial independent core, branding, thread/batch
 review, generated unwind support and evidence audit were developed in PRs
 [#1], [#2], [#3], [#4] and [#5]. Benchmark/package infrastructure was merged in
 [#6]; subsequent reviewed corrections are grouped above by resulting behavior.
@@ -101,3 +104,4 @@ Report-only review PRs are not counted as additional software releases.
 [#16]: https://github.com/raleonys/mithrilhook/pull/16
 [#17]: https://github.com/raleonys/mithrilhook/pull/17
 [#18]: https://github.com/raleonys/mithrilhook/pull/18
+[#19]: https://github.com/raleonys/mithrilhook/pull/19

@@ -20,7 +20,11 @@ MinHook-Detours, nor call-through latency. Its original safety/workload limits
 remain; values are not transferred to the new fork. Citrine's runtime-load
 benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
-## Completed runs and current candidate
+## Completed runs and current version
+
+The current distribution is 1.0.1. Its fresh exact-source broad run is tracked
+in [PR #19](https://github.com/raleonys/mithrilhook/pull/19). Earlier RC reports
+retain their original version and commit; they are not renamed as 1.0.1 results.
 
 - Broad #12-era source `f1f32266b5d0392a830269ef9c5894099126d60e`,
   [43477964529](https://github.com/raleonys/mithrilhook/actions/runs/43477964529):
@@ -151,8 +155,10 @@ python benchmarks/run.py --audit build/bench-results
 ```
 
 Use Win32 or ClangCL for the corresponding jobs and a fresh result directory.
-Only the new benchmark paths trigger the performance workflow on PRs; it also
-supports manual dispatch. The production library/build defaults are unchanged. The correctness workflow
+Benchmark inputs, VERSION, production sources/headers and package/build changes
+trigger the performance workflow on PRs; it also supports manual dispatch.
+This keeps core corrections from silently retaining older timing evidence.
+The production library/build defaults are unchanged. The correctness workflow
 also builds a separate consumer from the installed package in all seven native
 cells, checking both static and shared package use before application integration.
 

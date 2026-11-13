@@ -364,6 +364,19 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 
         if (oldPos < sizeof(JMP_REL))
         {
+            /* A copied x87 operation can publish its new IP via a later
+             * environment save, even beyond this prefix. There is no bounded
+             * FIP translation contract. Refuse the entire copied x87 class,
+             * not just FNSTENV/FNSAVE at the observation site. */
+            if (hs.opcode >= 0xD8 && hs.opcode <= 0xDF)
+                return FALSE;
+            /* Extended state layouts/features are not a proved relocation
+             * contract. Plain FXSAVE/FXRSTOR remain fixed-size operations;
+             * their x87 producers cannot be copied past the guard above. */
+            if (hs.opcode == 0x0F && hs.modrm_mod != 3 &&
+                ((hs.opcode2 == 0xAE && hs.modrm_reg >= 4 && hs.modrm_reg <= 6) ||
+                 (hs.opcode2 == 0xC7 && hs.modrm_reg >= 3 && hs.modrm_reg <= 5)))
+                return FALSE;
 #if defined(_M_X64) || defined(__x86_64__)
             /* The decoder recognizes REX2 lengths, but the engine has no full
              * APX register/unwind contract. Never infer one from legacy REX. */

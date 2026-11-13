@@ -30,7 +30,11 @@ CALL_GUARD='''            if (dest >= (ULONG_PTR)ct->pTarget &&
                 dest - (ULONG_PTR)ct->pTarget < sizeof(JMP_REL))
                 return FALSE;
 '''
-TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before original publication'}
+X87_GUARD='''            if (hs.opcode >= 0xD8 && hs.opcode <= 0xDF)
+                return FALSE;
+'''
+TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before original publication',
+ 'x87':'FAIL: x87 producer refuses before original publication'}
 def prepare(output):
  output=Path(output).resolve()
  if not output.is_relative_to((ROOT/'build').resolve()):
@@ -60,6 +64,8 @@ def prepare(output):
  trampoline=trampoline.decode()
  if trampoline.count(CALL_GUARD)!=1:raise ValueError('Missing unique internal CALL refusal')
  (output/'internal-call.c').write_text(trampoline.replace(CALL_GUARD,'',1))
+ if trampoline.count(X87_GUARD)!=1:raise ValueError('Missing unique x87 relocation refusal')
+ (output/'x87.c').write_text(trampoline.replace(X87_GUARD,'',1))
 def run(mode,command):
  result=subprocess.run(command,capture_output=True,text=True,timeout=35)
  print(result.stdout,end='');print(result.stderr,end='',file=sys.stderr)

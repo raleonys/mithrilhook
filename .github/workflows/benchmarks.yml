@@ -3,6 +3,11 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - 'VERSION'
+      - 'src/**'
+      - 'include/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
       - 'benchmarks/**'
       - 'metadata/BENCHMARK_SOURCES.json'
       - '.github/workflows/benchmarks.yml'

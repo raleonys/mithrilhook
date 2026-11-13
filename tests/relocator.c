@@ -168,6 +168,61 @@ static void internal_call_cases(BYTE *source, BYTE *trampoline)
     }
 }
 
+static void x87_state_cases(BYTE *source,BYTE *trampoline)
+{
+    const BYTE forms[][2]={
+        {0xd8,0xc0},{0xd9,0xee},{0xda,0xc1},{0xdb,0xe3},
+        {0xdc,0xc0},{0xdd,0xd8},{0xde,0xc1},{0xdf,0xe0},
+        {0xd8,1},{0xd9,1},{0xda,1},{0xdb,1},{0xdc,1},{0xdd,1},{0xde,1},{0xdf,1},
+        {0xd9,0x31},{0xd9,0x21},{0xdd,0x31},{0xdd,0x21},
+        {0xd9,0x39},{0xd9,0x29},{0xdd,0x39},{0xd9,0xd0}
+    };
+    const BYTE legacy[]={0,0x66,0x67,0x2e};
+    UINT form,prefix,site;
+    for(form=0;form<sizeof(forms)/sizeof(forms[0]);++form)
+    for(prefix=0;prefix<21;++prefix)
+    for(site=0;site<5;++site)
+    {
+        UINT size=prefix?1:0;BOOL copied=!(prefix==20&&site==4);
+        TRAMPOLINE ct;BYTE snapshot[64];
+        memset(source,0x90,64);
+        if(size)source[site]=prefix<4?legacy[prefix]:prefix<20?(BYTE)(0x40+prefix-4):0x9b;
+        memcpy(source+site+size,forms[form],2);source[site+size+2]=0xc3;
+        memcpy(snapshot,source,sizeof(snapshot));
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct)==!copied,
+            "copied x87 state producers refuse even when observation is outside the prefix");
+        check(!memcmp(source,snapshot,sizeof(snapshot)),"x87 refusal preserves source bytes");
+    }
+    {
+        const struct {BYTE bytes[4];UINT length;BOOL accepted;} states[]={
+            {{0x0f,0xae,1},3,TRUE},{{0x0f,0xae,9},3,TRUE},
+            {{0x48,0x0f,0xae,1},4,TRUE},{{0x48,0x0f,0xae,9},4,TRUE},
+            {{0x0f,0xae,0x11},3,TRUE},{{0x0f,0xae,0x19},3,TRUE},
+            {{0x0f,0xae,0xe8},3,TRUE},{{0x0f,0xae,0xf0},3,TRUE},{{0x0f,0xae,0xf8},3,TRUE},
+            {{0x0f,0xae,0x21},3,FALSE},{{0x0f,0xae,0x29},3,FALSE},{{0x0f,0xae,0x31},3,FALSE},
+            {{0x0f,0xc7,0x19},3,FALSE},{{0x0f,0xc7,0x21},3,FALSE},{{0x0f,0xc7,0x29},3,FALSE}
+        };
+        for(form=0;form<sizeof(states)/sizeof(states[0]);++form)
+        for(site=0;site<5;++site)
+        {
+            TRAMPOLINE ct;memset(source,0x90,64);memcpy(source+site,states[form].bytes,states[form].length);
+            source[site+states[form].length+2]=0xc3;
+            memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+            check(MthInternal_CreateTrampolineFunction(&ct)==states[form].accepted,
+                "fixed state save/restore and fences stay supported; extended state layouts refuse");
+        }
+    }
+    {
+        const BYTE report[]={0xd9,0xee,0xd9,0x31,0xdd,0xd8,0xc3};TRAMPOLINE ct;
+        memset(source,0x90,64);memcpy(source+5,report,sizeof(report));
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct),"x87 operations entirely after the copied prefix remain at source IPs");
+        memset(source,0x90,64);source[0]=0xd9;source[1]=0xee;source[8]=0xd9;source[9]=0x31;source[10]=0xc3;
+        check(!MthInternal_CreateTrampolineFunction(&ct),"a later source FNSTENV cannot observe an accepted copied x87 producer");
+    }
+}
+
 static void rip_patch_cases(BYTE *source, BYTE *trampoline)
 {
     static const struct { BYTE bytes[16]; UINT length; BOOL accepted; } cases[] = {
@@ -308,6 +363,7 @@ int main(void)
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");
     internal_branch_cases(code + 64, code + 512);
     internal_call_cases(code + 1024, code + 512);
+    x87_state_cases(code + 1024, code + 512);
     rip_patch_cases(code + 1024, code + 512);
     push_prefix_cases(code + 1024, code + 512);
     {

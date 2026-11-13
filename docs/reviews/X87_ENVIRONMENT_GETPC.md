@@ -2,7 +2,8 @@
 
 ## Review status
 
-This is a report-only review. It does not change the runtime engine. The
+The initial review was report-only. The correction and regression tests are
+now included in the same PR. The
 finding was reproduced against `04d422258afe7958dc64392263d5810b0d9c50b1`,
 the merge commit of PR #18 and current `master` at the time of review.
 
@@ -97,3 +98,56 @@ bytes, x87 stack balance, original publication, runtime-table ownership and
 retirement. Negative controls should prove the old accepted/different behavior
 fails, and the review should explicitly classify wait/non-wait environment and
 state-save variants plus a save occurring after the copied prefix.
+
+## Correction and explicit policy
+
+Copied D8-DF x87 operations now refuse before original publication on x86/x64.
+This intentionally includes arithmetic, register, memory, control, environment
+load/store and wait-prefixed forms when the x87 instruction is actually copied.
+Rejecting producers closes observations after the stolen prefix as well as
+saves inside it. A standalone WAIT does not create a new x87 FIP. x87 code
+entirely after an ordinary copied prefix keeps its source IP and remains usable.
+
+FXSAVE/FXRSTOR themselves do not create a new x87 FIP. Fixed-size forms remain
+supported without copied x87 producers, subject to existing range/unwind
+checks; the RIP-relative memory envelope remains 512 bytes. Copied XSAVE,
+XRSTOR, XSAVEOPT, XSAVEC, XSAVES and XRSTORS are explicitly refused because
+feature-dependent state layouts are not part of the proved contract. Fences
+and MXCSR access are distinct opcode extensions and remain unaffected.
+
+Independent local evidence uses the real Linux x64 CPU with projected memory
+APIs, not a genuine Windows runtime. The production relocator reproduced the
+exact FNSTENV mismatch and a later FNSTENV after the copied prefix. This AMD
+host zeros FXSAVE exception pointers with a clear exception summary; that probe
+did not independently reproduce the reporter's FXSAVE mismatch, and is not
+claimed to have done so. The producer guard nevertheless refuses all three
+layouts. Reporter differential/emulator/public-API evidence above retains its
+original scope and is not presented as a new run.
+
+Portable ASan/UBSan tests cover 2,520 x87 opcode/prefix/site layouts, 75 fixed
+and extended-state controls, and both prefix/body boundaries. All 16,907
+relocator assertions pass locally. Compiling against uncorrected source must
+exit 1 at the specific x87 refusal assertion, not an unrelated failure.
+
+The genuine Windows fixture exercises the exact RCX/ECX source, wait/non-wait
+environment/save forms, FXSAVE (including x64 REX.W), and observation after the
+copied prefix. Refusals preserve outputs/source bytes and leave no hook owner.
+Allowed ordinary prefixes retain actual source FIP through original calls,
+activation, restoration and retirement. Separate fixed FXSAVE/FXRSTOR controls
+remain supported. The owned invocation wrapper independently verifies an empty
+x87 stack and restoration of caller control/status/tags, MXCSR and XMM registers;
+source/wrapper runtime tables, code storage and handles are retired in order.
+AMD's architectural FXSAVE-zero case is distinguished from the exact
+FNSTENV/FNSAVE FIP oracle. The generated native negative control removes only
+the x87 guard and must exit 1 at the exact original-publication refusal before
+any unsafe original is executed. Exact-head Windows evidence is recorded in
+PR #19.
+
+## Version and changelog
+
+The owner selected version 1.0.1 without an RC suffix. VERSION, numeric/full
+CMake/package/DLL metadata, resource flags, current documentation and changelog
+are updated together. Installed consumers require exact 1.0.1 with prerelease
+consent disabled and verify normal compatible/incompatible numeric requests.
+No tag/release publication, license change or Citrine integration is performed
+by this PR. Prior benchmark/package records remain pinned to their own bytes.
