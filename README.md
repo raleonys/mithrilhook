@@ -7,6 +7,10 @@
 **Distribution license: [GPL-3.0-only](LICENSE).** Original third-party notices
 are retained separately; they are not alternative licenses for the complete fork.
 
+**Release candidate: 1.0.0-rc.1.** The canonical version is in [VERSION](VERSION).
+Build/package/resource metadata distinguishes this candidate from a stable
+1.0.0 release. See [Release preparation](docs/RELEASE.md).
+
 MithrilHook is an independently maintained Windows x86/x64 function-hooking
 library derived from MinHook. It has its own **MTH_*** API, build targets,
 package identity and version history. There is no legacy API alias header.
@@ -17,8 +21,11 @@ instruction relocation. **It is not a production acceptance or universal
 unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
 
-The current merged runtime passed 146 native Windows tests and two portable
-sanitizer tests. Native hook-engine comparisons retain source-specific reports and raw evidence; see
+The merged baseline through PR #16 passed 192 native Windows/package tests and
+two portable sanitizer tests. The candidate adds the PUSH range-precedence
+correction and real Windows unwind/execution cases; its exact-source validation
+and performance gates are recorded in [PR #17](https://github.com/raleonys/mithrilhook/pull/17).
+Native hook-engine comparisons retain source-specific reports and raw evidence; see
 [Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 
 ## What is included

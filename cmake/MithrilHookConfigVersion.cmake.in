@@ -1,0 +1,13 @@
+# Numeric compatibility and architecture checks remain CMake's standard rules.
+set(PACKAGE_VERSION_COMPATIBLE FALSE)
+set(PACKAGE_VERSION_EXACT FALSE)
+unset(PACKAGE_VERSION_UNSUITABLE)
+include("${CMAKE_CURRENT_LIST_DIR}/MithrilHookNumericVersion.cmake")
+set(PACKAGE_VERSION "@MITHRILHOOK_VERSION@")
+# CMake version requests cannot express SemVer prerelease suffixes. Require
+# explicit candidate consent for a numeric (potentially stable) request.
+if(NOT "@MITHRILHOOK_PRERELEASE@" STREQUAL "" AND PACKAGE_FIND_VERSION AND NOT MithrilHook_ALLOW_PRERELEASE)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+  set(PACKAGE_VERSION_EXACT FALSE)
+  set(PACKAGE_VERSION_UNSUITABLE TRUE)
+endif()

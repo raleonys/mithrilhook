@@ -157,6 +157,54 @@ static void rip_patch_cases(BYTE *source, BYTE *trampoline)
     }
 }
 
+static void check_push_layout(BYTE *source,BYTE *trampoline,const BYTE *prefix,UINT prefixSize,UINT width)
+{
+    int addresses[7]={-(int)width,1-(int)width,-1,0,4,5,64};
+    UINT index;
+    for(index=0;index<7;++index)
+    {
+        TRAMPOLINE ct;
+        UINT length=prefixSize+6;
+        INT32 displacement=addresses[index]-(INT32)length,relocated;
+        BOOL overlap=addresses[index]<5&&addresses[index]+(int)width>0;
+        memset(source,0x90,128);memcpy(source,prefix,prefixSize);
+        source[prefixSize]=0xff;source[prefixSize+1]=0x35;
+        memcpy(source+prefixSize+2,&displacement,4);source[length]=0xc3;
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct)==!overlap,
+            "PUSH range uses architectural REX.W/66 precedence at both patch boundaries");
+        if(!overlap)
+        {
+            memcpy(&relocated,trampoline+prefixSize+2,4);
+            check((INT64)(trampoline+length)+relocated==(INT64)source+addresses[index],
+                "disjoint PUSH retains its complete original effective address");
+            check(!memcmp(source,trampoline,prefixSize+2),"PUSH fixup preserves effective prefix order and opcode");
+        }
+    }
+}
+
+static void push_prefix_cases(BYTE *source,BYTE *trampoline)
+{
+    static const struct {BYTE prefix[4];UINT size,width;} special[]={
+        {{0},0,8},{{0x66},1,2},{{0x48},1,8},{{0x66,0x48},2,8},
+        {{0x48,0x66},2,2},{{0x66,0x48,0x66},3,2},{{0x48,0x66,0x48},3,8},
+        {{0x66,0x48,0x40},3,2},{{0x66,0x40,0x48},3,8}
+    };
+    UINT rex,order,index;
+    for(index=0;index<sizeof(special)/sizeof(special[0]);++index)
+        check_push_layout(source,trampoline,special[index].prefix,special[index].size,special[index].width);
+    for(rex=0;rex<16;++rex)
+    for(order=0;order<4;++order)
+    {
+        BYTE prefix[3];UINT size,width;
+        if(order==0){prefix[0]=(BYTE)(0x40+rex);size=1;width=8;}
+        else if(order==1){prefix[0]=0x66;prefix[1]=(BYTE)(0x40+rex);size=2;width=(rex&8)?8:2;}
+        else if(order==2){prefix[0]=(BYTE)(0x40+rex);prefix[1]=0x66;size=2;width=2;}
+        else{prefix[0]=0x66;prefix[1]=0x48;prefix[2]=(BYTE)(0x40+rex);size=3;width=(rex&8)?8:2;}
+        check_push_layout(source,trampoline,prefix,size,width);
+    }
+}
+
 int main(void)
 {
     SYSTEM_INFO info;
@@ -212,6 +260,7 @@ int main(void)
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");
     internal_branch_cases(code + 64, code + 512);
     rip_patch_cases(code + 1024, code + 512);
+    push_prefix_cases(code + 1024, code + 512);
     {
         const BYTE load[]={0x48,0x8b,0x44,0x24,0x60};
         const BYTE stack[]={0x48,0x83,0xec,0x38};

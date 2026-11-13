@@ -41,6 +41,7 @@ target_compile_definitions(mithrilhook_target_probe PRIVATE MTH_REQUIRE_ALL_TARG
 # Internal relocation helpers are intentionally not exported from the DLL.
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   mth_linked(mithrilhook_rip_patch_contracts native/rip_patch.c)
+  mth_linked(mithrilhook_push_rip_contracts native/push_rip.c)
   mth_linked(mithrilhook_unwind_contracts native/unwind.c)
   add_executable(mithrilhook_unwind_failure_contracts native/unwind_failures.c ${PROJECT_SOURCE_DIR}/src/trampoline.c ${PROJECT_SOURCE_DIR}/${MTH_HDE})
   target_include_directories(mithrilhook_unwind_failure_contracts PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)

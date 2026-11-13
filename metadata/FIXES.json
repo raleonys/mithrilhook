@@ -130,6 +130,11 @@
       "id": "F26",
       "change": "Reserve complete normal/hotpatch physical write intervals, including disabled entries; refuse overlapping owners before original publication",
       "origin": "MithrilHook review #16; distinct target addresses can own intersecting patch bytes"
+    },
+    {
+      "id": "F27",
+      "change": "Apply effective REX.W precedence over 66 for the full RIP-relative PUSH memory range and preserve proven disjoint controls",
+      "origin": "MithrilHook review #17; operand-size underestimation introduced in the F25 range guard"
     }
   ],
   "excluded_unreviewed_proposals": {

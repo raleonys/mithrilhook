@@ -130,6 +130,9 @@ def check_controls():
 
 def audit(output):
  output=Path(output);manifest=read(output/'run.json')
+ assert manifest['schema']=='mithrilhook.benchmark-run.v2'
+ assert sha(output/'VERSION')==read(output/'SOURCE_MANIFEST.json')['files']['VERSION']
+ assert manifest['candidate_version']==(output/'VERSION').read_text().strip()
  assert manifest['engines']==ENGINES and manifest['cases']==[list(c) for c in CASES] and manifest['rounds']==ROUNDS
  receipts={name:read(output/'binaries'/f'bench_{name}.receipt.json') for name in ENGINES}
  for name,receipt in receipts.items():
@@ -192,6 +195,7 @@ def measure(build,output):
  for name,digest in input_record['files'].items():assert sha(ROOT/name)==digest,name
  assert input_record['lock_sha256']==sha(ROOT/'metadata/BENCHMARK_SOURCES.json')
  shutil.copy2(inputs,output/'inputs.json');shutil.copy2(ROOT/'metadata/SOURCE_MANIFEST.json',output/'SOURCE_MANIFEST.json')
+ shutil.copy2(ROOT/'VERSION',output/'VERSION')
  receipts={}
  for engine in ENGINES:
   for prefix in ['bench','probe']:
@@ -206,7 +210,7 @@ def measure(build,output):
    dest=output/'licenses'/Path(relative).relative_to('build');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,dest)
  for name in ['LICENSE','LICENSE.txt','LICENSE.SAFE_FREEZE','THIRD_PARTY_NOTICES.txt','metadata/BENCHMARK_SOURCES.json']:
   dest=output/'licenses'/'mithrilhook'/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,dest)
- manifest={'schema':'mithrilhook.benchmark-run.v1','run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count(),'power_policy':subprocess.run(['powercfg','/getactivescheme'],capture_output=True,text=True).stdout.strip()},'engines':ENGINES,'cases':CASES,'rounds':ROUNDS,'seed':19473,'children':[],'controls':[],'probe_cases':PROBES,'probes':[]}
+ manifest={'schema':'mithrilhook.benchmark-run.v2','candidate_version':(ROOT/'VERSION').read_text().strip(),'run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count(),'power_policy':subprocess.run(['powercfg','/getactivescheme'],capture_output=True,text=True).stdout.strip()},'engines':ENGINES,'cases':CASES,'rounds':ROUNDS,'seed':19473,'children':[],'controls':[],'probe_cases':PROBES,'probes':[]}
  api_exe=build/'Release/api_mithrilhook.exe';api_receipt=read(api_exe.with_suffix('.receipt.json'))
  assert api_receipt['exe_sha256']==sha(api_exe) and api_receipt['source_digest']==manifest['source_digest'] and api_receipt['input_digest']==manifest['input_digest']
  shutil.copy2(api_exe,output/'binaries'/api_exe.name);shutil.copy2(api_exe.with_suffix('.receipt.json'),output/'binaries'/api_exe.with_suffix('.receipt.json').name)
@@ -256,7 +260,7 @@ def measure(build,output):
 def print_report(output):
  summary=read(Path(output)/'summary.json');rows=summary['timings']
  manifest=read(Path(output)/'run.json')
- lines=['# Native hook-engine comparison','',f"Source: `{manifest['commit']}`; compiler: `{read(Path(output)/'binaries/bench_mithrilhook.receipt.json')['compiler']}`.",f"Host: {manifest['host']['platform']}; {manifest['host']['processor']}; logical processors: {manifest['host']['logical_processors']}.",'',f"{summary['children']} positive children; {summary['rounds']} paired rounds; {len(CASES)} workload cases.",'', 'Example: leaf fixtures, 11 hooks and 4 idle peers; medians across retained samples.', '', '| Engine | Cold complete install (us total) | Complete remove (us total, warm) | Detour-to-original (ns/call batch average) |', '| --- | ---: | ---: | ---: |']
+ lines=['# Native hook-engine comparison','',f"MithrilHook candidate version: `{manifest['candidate_version']}`.",'',f"Source: `{manifest['commit']}`; compiler: `{read(Path(output)/'binaries/bench_mithrilhook.receipt.json')['compiler']}`.",f"Host: {manifest['host']['platform']}; {manifest['host']['processor']}; logical processors: {manifest['host']['logical_processors']}.",'',f"{summary['children']} positive children; {summary['rounds']} paired rounds; {len(CASES)} workload cases.",'', 'Example: leaf fixtures, 11 hooks and 4 idle peers; medians across retained samples.', '', '| Engine | Cold complete install (us total) | Complete remove (us total, warm) | Detour-to-original (ns/call batch average) |', '| --- | ---: | ---: | ---: |']
  for name in ENGINES:
   def value(metric):return next(r['median_ns'] for r in rows if r['engine']==name and r['hooks']==11 and r['peers']==4 and r['callers']==0 and r['metric']==metric)
   lines.append(f'| {name} | {value("complete_install_cold")*11/1000:.2f} | {value("complete_remove_warm")*11/1000:.2f} | {value("detour_original"):.2f} |')
