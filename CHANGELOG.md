@@ -4,6 +4,8 @@
 
 - Register owned x64 unwind metadata for supported relocated prefixes, with a
   synthetic prologue covering the jump-back and an unchanged 64-byte code limit.
+  Generated nonleaf entries use version 2 on Windows 10 and later; older or
+  unknown systems retain strict refusal for those prefixes.
 - Keep runtime-table registry calls outside owned suspension windows; retain
   and recover registration/deletion/storage failures without losing owners.
 - Require all eleven pinned-runner targets to pass create/remove classification;

@@ -9,6 +9,7 @@
 
 static unsigned checks, suspended, suspends, adds, deletes, frees;
 static BOOL fail_add, fail_delete, fail_free, fail_flush;
+static BOOL older_system, unknown_system;
 static unsigned fail_delete_after, fail_free_call;
 static SIZE_T fail_heap_size;
 static LPVOID last_buffer;
@@ -24,8 +25,14 @@ static LONG NTAPI next_peer(HANDLE process,HANDLE previous,ACCESS_MASK access,UL
     (void)process;(void)access;(void)attributes;(void)flags;
     *next=previous?NULL:cursor;return *next?0:(LONG)0x8000001aL;
 }
+static LONG NTAPI reported_version(LPOSVERSIONINFOW version)
+{version->dwMajorVersion=6;version->dwMinorVersion=3;return unknown_system?(LONG)0xc0000001L:0;}
 static FARPROC WINAPI lookup(HMODULE module,LPCSTR name)
-{return !strcmp(name,"NtGetNextThread")?(FARPROC)next_peer:GetProcAddress(module,name);}
+{
+    if(!strcmp(name,"NtGetNextThread"))return (FARPROC)next_peer;
+    if(!strcmp(name,"RtlGetVersion")&&(older_system||unknown_system))return (FARPROC)reported_version;
+    return GetProcAddress(module,name);
+}
 static DWORD WINAPI thread_id(HANDLE h)
 {return h==cursor||h==peer?GetCurrentThreadId()+1:GetThreadId(h);}
 static BOOL WINAPI duplicate(HANDLE a,HANDLE h,HANDLE b,LPHANDLE out,DWORD access,BOOL inherit,DWORD flags)
@@ -108,6 +115,7 @@ static void setup(unsigned count)
     unsigned i;
     suspended=suspends=adds=deletes=frees=0;
     fail_add=fail_delete=fail_free=fail_flush=FALSE;
+    older_system=unknown_system=FALSE;
     fail_delete_after=fail_free_call=0;fail_heap_size=0;last_buffer=NULL;
     memset(peer_stack,0,sizeof(peer_stack));
     code=VirtualAlloc(NULL,8192,MEM_RESERVE|MEM_COMMIT,PAGE_EXECUTE_READWRITE);
@@ -149,6 +157,15 @@ static void initial_registration_failure(void)
     require(MTH_CreateHook(code,code+2048,&original)==MTH_ERROR_MEMORY_PROTECT&&original==(LPVOID)(ULONG_PTR)0x1234,
         "failed initial registration never publishes an original pointer");
     require(g_hooks.size==0&&g_pMemoryBlocks==NULL&&!g_retainedBuffer,"failed initial registration releases its unpublished allocation");
+    finish();
+}
+static void unsupported_system(BOOL unknown)
+{
+    LPVOID original=(LPVOID)(ULONG_PTR)0x1234;setup(1);
+    older_system=!unknown;unknown_system=unknown;
+    require(MTH_CreateHook(code,code+2048,&original)==MTH_ERROR_UNSUPPORTED_FUNCTION&&original==(LPVOID)(ULONG_PTR)0x1234,
+        "older or unknown OS refuses generated version-2 metadata without publishing output");
+    require(adds==0&&g_hooks.size==0&&g_pMemoryBlocks==NULL,"unsupported OS releases unpublished storage without registry publication");
     finish();
 }
 static void deletion_failure(void)
@@ -210,6 +227,7 @@ static void partial_block_teardown(void)
 }
 int main(void)
 {
+    unsupported_system(FALSE);unsupported_system(TRUE);
     initial_registration_failure();deletion_failure();free_failure(FALSE);free_failure(TRUE);
     unpublished_failure(FALSE);unpublished_failure(TRUE);partial_table_teardown();partial_block_teardown();
     printf("PASS: %u native registry/retirement failure checks with projected peers; no registry call during owned suspension\n",checks);
