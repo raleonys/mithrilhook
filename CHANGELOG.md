@@ -5,6 +5,11 @@ There is no published release or release tag. The CMake project version is
 
 ## Unreleased
 
+- Reserve complete normal/hotpatch write intervals at creation, including
+  disabled hooks; refuse intersecting owners before original publication.
+- Cover both creation/removal orders, individual/all/queued activation,
+  adjacent controls, disjoint alternate hotpatches and exact negative controls.
+
 - Refuse a relocated x64 RIP-relative load or store of the five bytes the hook
   jump overwrites. LEA and accesses completely outside that window keep the
   absolute-address fixup; the adjusted trampoline is not used as a raw image.

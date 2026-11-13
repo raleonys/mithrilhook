@@ -125,6 +125,11 @@
       "id": "F25",
       "change": "Refuse relocated x64 RIP-relative loads and stores of the five-byte hook patch; keep LEA and accesses outside that window on the absolute-address fixup",
       "origin": "MithrilHook; relocated self-read observed the published JMP instead of the original bytes"
+    },
+    {
+      "id": "F26",
+      "change": "Reserve complete normal/hotpatch physical write intervals, including disabled entries; refuse overlapping owners before original publication",
+      "origin": "MithrilHook review #16; distinct target addresses can own intersecting patch bytes"
     }
   ],
   "excluded_unreviewed_proposals": {

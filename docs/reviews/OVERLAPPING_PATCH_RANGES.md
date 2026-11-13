@@ -67,5 +67,10 @@ controls, individual enable, all-hooks enable, queued apply, removal in both
 orders, restored source bytes and native Windows execution/cleanup. The chosen
 public refusal status must be documented and must not publish `ppOriginal`.
 
-Implementation and native Windows validation remain pending. This PR changes
-only this report and its source-inventory entry.
+The historical reproduction above is preserved. This PR now also implements
+interval reservation under the engine lock before publication, with the
+documented unsupported status and unchanged output/bytes on refusal. It adds
+public-API native execution/retirement cases, normal/hotpatch interval-boundary
+checks and an exact-assertion control that disables only the reservation check.
+The current validation verdict is recorded in the PR description; the original
+projected-API/CPU reproduction is not presented as native Windows evidence.

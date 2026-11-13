@@ -132,6 +132,49 @@ static UINT FindHookEntry(LPVOID pTarget)
     return INVALID_HOOK_POS;
 }
 
+/* Disabled entries still own their future physical writes. The engine lock
+ * covers this check and publication, so two entries cannot reserve the same
+ * bytes. Use the actual hotpatch range, not only the target address. */
+static BOOL IsPatchIntervalAvailable(ULONG_PTR start, SIZE_T size)
+{
+    UINT index;
+    ULONG_PTR limit = ~(ULONG_PTR)0;
+    if (size == 0 || size > limit - start)
+        return FALSE;
+    for (index = 0; index < g_hooks.size; ++index)
+    {
+        const HOOK_ENTRY *hook = &g_hooks.pItems[index];
+        ULONG_PTR owned = (ULONG_PTR)hook->pTarget;
+        SIZE_T ownedSize = sizeof(JMP_REL);
+        if (hook->patchAbove)
+        {
+            if (owned < sizeof(JMP_REL))
+                return FALSE;
+            owned -= sizeof(JMP_REL);
+            ownedSize += sizeof(JMP_REL_SHORT);
+        }
+        if (ownedSize > limit - owned)
+            return FALSE;
+        if (start < owned + ownedSize && owned < start + size)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL IsHookPatchAvailable(const TRAMPOLINE *ct)
+{
+    ULONG_PTR start = (ULONG_PTR)ct->pTarget;
+    SIZE_T size = sizeof(JMP_REL);
+    if (ct->patchAbove)
+    {
+        if (start < sizeof(JMP_REL))
+            return FALSE;
+        start -= sizeof(JMP_REL);
+        size += sizeof(JMP_REL_SHORT);
+    }
+    return IsPatchIntervalAvailable(start, size);
+}
+
 //-------------------------------------------------------------------------
 static PHOOK_ENTRY AddHookEntry()
 {
@@ -1324,7 +1367,12 @@ MTH_STATUS WINAPI MTH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID *ppOrigi
                     ct.pTarget     = pTarget;
                     ct.pDetour     = pDetour;
                     ct.pTrampoline = pBuffer;
-                    if (MthInternal_CreateTrampolineFunction(&ct) && IsRelocationUnwindSafe(&ct))
+                    /* Every placement writes at least the short entry jump.
+                     * Refuse that certain overlap before decoding owned patch
+                     * bytes; check the complete placement after layout. */
+                    if (IsPatchIntervalAvailable((ULONG_PTR)pTarget, sizeof(JMP_REL_SHORT)) &&
+                        MthInternal_CreateTrampolineFunction(&ct) && IsHookPatchAvailable(&ct) &&
+                        IsRelocationUnwindSafe(&ct))
                     {
                         PHOOK_ENTRY pHook = NULL;
                         if (MthInternal_RegisterBufferUnwind(pBuffer) &&

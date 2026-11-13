@@ -61,6 +61,13 @@ operations. Removal remains target-specific; uninitialize retires the complete
 engine after the required quiescence. An already initialized engine must not be
 silently adopted and later uninitialized by an unrelated consumer.
 
+Creation reserves the complete physical patch interval even while disabled:
+normal placement owns [target,target+5), and hotpatch-above placement owns
+[target-5,target+2). An intersecting reservation returns
+MTH_ERROR_UNSUPPORTED_FUNCTION without publishing ppOriginal. Exact duplicate
+targets retain MTH_ERROR_ALREADY_CREATED. Adjacent intervals are permitted;
+an interval remains reserved until its hook owner is completely retired.
+
 Failures can follow physical progress. After cache/protection failure, enabled
 state records written bytes and completion ownership remains reachable. New
 mutations must recover pending completion first. Partial block retirement
