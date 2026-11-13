@@ -96,7 +96,26 @@ int main(void)
         check(memcmp(bytes,arena,sizeof bytes)==0,"exact target bytes after removal");
         original=NULL;check(MTH_CreateHook(arena,arena+64,&original)==MTH_OK,"recreate before active uninitialize");
         check(MTH_EnableHook(arena)==MTH_OK&&state.target(5)==47,"actual call before uninitialize");
-        check(MTH_Uninitialize()==MTH_OK&&state.target(5)==12,"uninitialize restores executable target");
+        {
+            MTH_STATUS shutdown=MTH_Uninitialize();
+            DWORD shutdownError=GetLastError();
+            int result=shutdown==MTH_OK?state.target(5):-1;
+            BOOL restored=memcmp(bytes,arena,sizeof bytes)==0;
+            if(shutdown!=MTH_OK||result!=12||!restored)
+            {
+                unsigned index;
+                fprintf(stderr,"LIVE_CALLS_TEARDOWN session=%u status=%s status_value=%d win32_error=%lu target_called=%u target_result=%d bytes_restored=%u\n",
+                    session,MTH_StatusToString(shutdown),(int)shutdown,shutdownError,
+                    (unsigned)(shutdown==MTH_OK),result,(unsigned)restored);
+                fprintf(stderr,"LIVE_CALLS_SOURCE expected=");
+                for(index=0;index<sizeof bytes;++index)fprintf(stderr,"%02x",bytes[index]);
+                fprintf(stderr," actual=");
+                for(index=0;index<sizeof bytes;++index)fprintf(stderr,"%02x",arena[index]);
+                fprintf(stderr,"\n");fflush(stderr);
+            }
+            check(shutdown==MTH_OK,"uninitialize completes after joined callers");
+            check(result==12,"uninitialize restores executable target result");
+        }
         check(MTH_DisableHook(arena)==MTH_ERROR_NOT_INITIALIZED,"engine ownership retired");
         check(memcmp(bytes,arena,sizeof bytes)==0,"exact target bytes after uninitialize");
     }
