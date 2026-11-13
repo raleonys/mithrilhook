@@ -32,6 +32,7 @@ set_tests_properties(mithrilhook_completion_contracts PROPERTIES TIMEOUT 45)
 mth_linked(mithrilhook_real_peer_contracts native/real_peer.cpp)
 mth_linked(mithrilhook_live_call_contracts native/live_calls.c)
 mth_linked(mithrilhook_retirement_contracts native/retirement_peer.cpp)
+mth_linked(mithrilhook_prefixed_branch_contracts native/prefixed_branches.c)
 mth_linked(mithrilhook_target_probe native/target_probe.c)
 target_compile_definitions(mithrilhook_target_probe PRIVATE MTH_REQUIRE_ALL_TARGETS=1)
 # Internal relocation helpers are intentionally not exported from the DLL.
