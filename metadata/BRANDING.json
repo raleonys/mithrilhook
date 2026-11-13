@@ -3,11 +3,14 @@
   "name": "MithrilHook",
   "logo": {
     "path": "resources/branding/mithrilhook.png",
-    "sha256": "043abad9a1e0e6f5854a091612d142959574054e8736053fe76e181eba43df3f",
+    "sha256": "6de37e6053c685a34ae80eebe6389405d71a73359115e8bee76337ec9e11a45b",
     "width": 1536,
     "height": 1024,
     "format": "RGBA PNG",
-    "approved_artwork_bytes_preserved": true
+    "approved_artwork_bytes_preserved": false,
+    "source_artwork_sha256": "043abad9a1e0e6f5854a091612d142959574054e8736053fe76e181eba43df3f",
+    "adjustment": "Original emblem and ornaments translated 5 pixels right; wordmark preserved.",
+    "generative_redraw": false
   },
   "public_header": "MithrilHook.h",
   "api_prefix": "MTH_",

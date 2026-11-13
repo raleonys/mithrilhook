@@ -2,6 +2,15 @@
 
 ## 0.1.0 development candidate
 
+- Reconcile suspended peer IPs against physically committed hook transitions
+  after preparation or partial-batch failures; retain failed repairs for retry.
+- Recheck live peer coverage after suspension and refuse an observed late birth
+  before patching or retiring generated code.
+- Reject registered x64 targets whose relocated prefix needs unwind operations,
+  language handlers or chained metadata that the trampoline does not provide.
+- Add deterministic failure cases, genuine runtime-function/unwind checks and
+  precise reconciliation/coverage/unwind negative controls.
+- Apply the approved five-pixel logo alignment without regenerating the artwork.
 - Established an independent MTH API, MithrilHook package/DLL identity and CMake
   target; removed the legacy compatibility header and inherited build products.
 - Integrated strict SAFE-FREEZE, all five mutation cleanup barriers, correct

@@ -74,6 +74,7 @@ typedef struct _HOOK_ENTRY
     UINT8  patchAbove  : 1;     // Uses the hot patch area.
     UINT8  isEnabled   : 1;     // Enabled.
     UINT8  queueEnable : 1;     // Queued for enabling/disabling when != isEnabled.
+    UINT8  freezeEnabled : 1;   // Physical state before the current peer transaction.
 
     UINT   nIP : 4;             // Count of the instruction boundaries.
     UINT8  oldIPs[8];           // Instruction boundaries of the target function.
@@ -85,6 +86,9 @@ typedef struct _FROZEN_THREAD_ITEM
 {
     HANDLE handle;
     BOOL   suspended;
+    DWORD  threadId;
+    BOOL   ipCaptured;
+    DWORD_PTR originalIP;
 } FROZEN_THREAD_ITEM, *PFROZEN_THREAD_ITEM;
 
 typedef struct _FROZEN_THREADS
@@ -104,6 +108,7 @@ static volatile LONG g_ownerThreadId = 0;
 
 // Private heap handle. If not NULL, this library is initialized.
 static HANDLE g_hHeap = NULL;
+static BOOL g_ipTransactionActive;
 
 // Hook entries.
 static struct
@@ -224,8 +229,9 @@ static BOOL ThreadNoLongerLive(HANDLE hThread)
     return GetLastError() == ERROR_INVALID_HANDLE;
 }
 
-static PEER_PREPARATION_RESULT ProcessThreadIPs(HANDLE hThread, UINT pos, UINT action)
+static PEER_PREPARATION_RESULT ProcessThreadIPs(PFROZEN_THREAD_ITEM item, UINT pos, UINT action)
 {
+    HANDLE hThread = item->handle;
     CONTEXT c;
 #if defined(_M_X64) || defined(__x86_64__)
     DWORD64 *pIP = &c.Rip;
@@ -237,6 +243,8 @@ static PEER_PREPARATION_RESULT ProcessThreadIPs(HANDLE hThread, UINT pos, UINT a
     c.ContextFlags = CONTEXT_CONTROL;
     if (!GetThreadContext(hThread, &c))
         return ThreadNoLongerLive(hThread) ? PEER_TERMINATED : PEER_UNRESOLVED;
+    item->originalIP = (DWORD_PTR)*pIP;
+    item->ipCaptured = TRUE;
 
     if (pos == ALL_HOOKS_POS)
     {
@@ -284,10 +292,76 @@ static PEER_PREPARATION_RESULT ProcessThreadIPs(HANDLE hThread, UINT pos, UINT a
     return PEER_PREPARED;
 }
 
+/* Preparation may have moved a peer before a later peer or target fails.
+ * Rebuild its destination from the original IP and only physically written
+ * hook transitions. Never resume on an unresolved context repair. */
+static BOOL ReconcileThreadIPs(PFROZEN_THREADS pThreads)
+{
+    UINT i, pos;
+    BOOL complete = TRUE;
+    if (!g_ipTransactionActive)
+        return TRUE;
+    for (i = 0; i < pThreads->size; ++i)
+    {
+        PFROZEN_THREAD_ITEM item = &pThreads->pItems[i];
+        CONTEXT context;
+        DWORD_PTR desired;
+        if (!item->ipCaptured)
+            continue;
+        if (ThreadNoLongerLive(item->handle))
+        {
+            item->ipCaptured = FALSE;
+            continue;
+        }
+        context.ContextFlags = CONTEXT_CONTROL;
+        if (!GetThreadContext(item->handle, &context))
+        {
+            if (ThreadNoLongerLive(item->handle))
+                item->ipCaptured = FALSE;
+            else
+                complete = FALSE;
+            continue;
+        }
+        desired = item->originalIP;
+        for (pos = 0; pos < g_hooks.size; ++pos)
+        {
+            PHOOK_ENTRY hook = &g_hooks.pItems[pos];
+            DWORD_PTR ip;
+            if (hook->freezeEnabled == hook->isEnabled)
+                continue;
+            ip = hook->isEnabled ? FindNewIP(hook, desired) : FindOldIP(hook, desired);
+            if (ip != 0)
+                desired = ip;
+        }
+#if defined(_M_X64) || defined(__x86_64__)
+        if (context.Rip != desired)
+        {
+            context.Rip = desired;
+#else
+        if (context.Eip != desired)
+        {
+            context.Eip = (DWORD)desired;
+#endif
+            if (!SetThreadContext(item->handle, &context))
+            {
+                if (ThreadNoLongerLive(item->handle))
+                    item->ipCaptured = FALSE;
+                else
+                    complete = FALSE;
+                continue;
+            }
+        }
+        item->ipCaptured = FALSE;
+    }
+    if (complete)
+        g_ipTransactionActive = FALSE;
+    return complete;
+}
+
 //-------------------------------------------------------------------------
 /* MTH_SAFE_FREEZE_V1
  *
- * Stock MithrilHook enumerates peer threads with CreateToolhelp32Snapshot.
+ * The inherited engine enumerated peer threads with CreateToolhelp32Snapshot.
  * Strict mode uses stable owned handles and rejects unresolved peers.
  * Keep MithrilHook's suspend/context/IP-relocation contract, but enumerate stable
  * thread handles with NtGetNextThread instead. Callers must avoid loader lock.
@@ -469,6 +543,8 @@ static BOOL AppendThreadHandle(PFROZEN_THREADS pThreads, HANDLE hThread)
     }
     pThreads->pItems[pThreads->size].handle = hThread;
     pThreads->pItems[pThreads->size].suspended = FALSE;
+    pThreads->pItems[pThreads->size].threadId = 0;
+    pThreads->pItems[pThreads->size].ipCaptured = FALSE;
     ++pThreads->size;
     return TRUE;
 }
@@ -574,7 +650,8 @@ static BOOL ReleaseFrozenThreadOwnership(PFROZEN_THREADS pThreads)
 
 static BOOL PreserveFrozenThreadOwnership(PFROZEN_THREADS pThreads)
 {
-    if (ReleaseFrozenThreadOwnership(pThreads))
+    if (!g_patchCompletion.active && ReconcileThreadIPs(pThreads) &&
+        ReleaseFrozenThreadOwnership(pThreads))
         return TRUE;
     if (g_retainedThreads.pItems != NULL)
         return FALSE; /* Freeze drains this before creating a new owner set. */
@@ -588,7 +665,7 @@ static BOOL PreserveFrozenThreadOwnership(PFROZEN_THREADS pThreads)
 static BOOL RetryRetainedThreadOwnership(VOID)
 {
     /* Never resume peers into an instruction stream whose completion failed. */
-    if (!RetryPatchCompletion())
+    if (!RetryPatchCompletion() || !ReconcileThreadIPs(&g_retainedThreads))
         return FALSE;
     if (!ReleaseEmergencyThreadOwnership() || !ReleaseFrozenThreadOwnership(&g_retainedThreads))
         return FALSE;
@@ -673,6 +750,7 @@ static THREAD_ENUMERATION_RESULT EnumerateThreads(PFROZEN_THREADS pThreads)
                     ? THREAD_ENUMERATION_ALLOC_FAILED
                     : THREAD_ENUMERATION_OWNERSHIP_FAILED;
             }
+            pThreads->pItems[pThreads->size - 1].threadId = GetThreadId(next);
         }
     }
     if (cursor != NULL && !CloseOrRetainEmergency(cursor))
@@ -681,6 +759,54 @@ static THREAD_ENUMERATION_RESULT EnumerateThreads(PFROZEN_THREADS pThreads)
         return THREAD_ENUMERATION_OWNERSHIP_FAILED;
     }
     return THREAD_ENUMERATION_OK;
+}
+
+/* A second observation after suspension catches peers born during the first
+ * enumeration/preparation window. It is not a universal thread-birth barrier. */
+static MTH_STATUS VerifyFrozenThreadCoverage(PFROZEN_THREADS pThreads)
+{
+    PFN_NT_GET_NEXT_THREAD getNextThread = ResolveNtGetNextThread();
+    HANDLE cursor = NULL;
+    DWORD current = GetCurrentThreadId();
+    MTH_STATUS result = MTH_OK;
+    if (getNextThread == NULL)
+        return MTH_UNKNOWN;
+    for (;;)
+    {
+        HANDLE next = NULL;
+        NTSTATUS status = getNextThread(GetCurrentProcess(), cursor, THREAD_ACCESS, 0, 0, &next);
+        DWORD id;
+        UINT i;
+        BOOL covered = FALSE;
+        if (cursor != NULL && !CloseOrRetainEmergency(cursor))
+        {
+            if (NT_SUCCESS(status) && next != NULL)
+                g_emergencyNextThread.handle = next;
+            return MTH_ERROR_MEMORY_PROTECT;
+        }
+        cursor = NULL;
+        if (!NT_SUCCESS(status))
+            return status == STATUS_NO_MORE_ENTRIES ? MTH_OK : MTH_UNKNOWN;
+        cursor = next;
+        id = GetThreadId(cursor);
+        if (id == current)
+            continue;
+        if (id != 0)
+            for (i = 0; i < pThreads->size; ++i)
+                if (pThreads->pItems[i].threadId == id &&
+                    pThreads->pItems[i].suspended &&
+                    !ThreadNoLongerLive(pThreads->pItems[i].handle))
+                {
+                    covered = TRUE;
+                    break;
+                }
+        if (!covered && !ThreadNoLongerLive(cursor))
+        {
+            result = MTH_ERROR_MEMORY_PROTECT;
+            break;
+        }
+    }
+    return CloseOrRetainEmergency(cursor) ? result : MTH_ERROR_MEMORY_PROTECT;
 }
 
 //-------------------------------------------------------------------------
@@ -708,6 +834,13 @@ static MTH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
             return MTH_UNKNOWN;
         }
     }
+    if (action != ACTION_RETIRE)
+    {
+        UINT i;
+        for (i = 0; i < g_hooks.size; ++i)
+            g_hooks.pItems[i].freezeEnabled = g_hooks.pItems[i].isEnabled;
+        g_ipTransactionActive = TRUE;
+    }
     if (pThreads->pItems != NULL)
     {
         UINT i;
@@ -720,7 +853,7 @@ static MTH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
             {
                 PEER_PREPARATION_RESULT peerResult;
                 pItem->suspended = TRUE;
-                peerResult = action == ACTION_RETIRE ? CheckRetiringThread(pItem->handle) : ProcessThreadIPs(pItem->handle, pos, action);
+                peerResult = action == ACTION_RETIRE ? CheckRetiringThread(pItem->handle) : ProcessThreadIPs(pItem, pos, action);
                 if (peerResult == PEER_UNRESOLVED)
                     status = MTH_ERROR_MEMORY_PROTECT;
             }
@@ -730,6 +863,8 @@ static MTH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
             }
         }
     }
+    if (status == MTH_OK)
+        status = VerifyFrozenThreadCoverage(pThreads);
     if (status != MTH_OK)
         (void)PreserveFrozenThreadOwnership(pThreads);
     return status;
@@ -991,6 +1126,72 @@ MTH_STATUS WINAPI MTH_Uninitialize(VOID)
 }
 
 //-------------------------------------------------------------------------
+/* No generated x64 unwind table is advertised. A valid registered function may
+ * only use the leaf fallback while executing the relocated prefix if that
+ * prefix contains no unwind operation and no language/chained handler applies.
+ * Reject the unsupported cases instead of publishing a misleading trampoline. */
+static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    DWORD64 base = 0;
+    PRUNTIME_FUNCTION found = RtlLookupFunctionEntry((DWORD64)(ULONG_PTR)ct->pTarget, &base, NULL);
+    RUNTIME_FUNCTION function;
+    BYTE info[4 + 255 * 2];
+    SIZE_T copied = 0;
+    UINT index, count;
+    DWORD64 address;
+    if (found == NULL)
+        return TRUE; /* An ABI-valid unregistered function must already be leaf-unwindable. */
+    if (!ReadProcessMemory(GetCurrentProcess(), found, &function, sizeof(function), &copied) ||
+        copied != sizeof(function) || function.EndAddress <= function.BeginAddress ||
+        ct->oldSize > function.EndAddress - function.BeginAddress ||
+        base > (DWORD64)-1 - function.UnwindData ||
+        (DWORD64)(ULONG_PTR)ct->pTarget < base ||
+        (DWORD64)(ULONG_PTR)ct->pTarget - base != function.BeginAddress)
+        return FALSE;
+    address = base + function.UnwindData;
+    if (address > (DWORD64)-1 - sizeof(info) ||
+        !ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(ULONG_PTR)address, info, 4, &copied) || copied != 4)
+        return FALSE;
+    if (info[0] != 1) /* Version 1, no handler or chained-info flags. */
+        return FALSE;
+    count = info[2];
+    if (!ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(ULONG_PTR)(address + 4), info + 4,
+            count * 2, &copied) || copied != count * 2)
+        return FALSE;
+    for (index = 0; index < count;)
+    {
+        UINT offset = info[4 + index * 2];
+        UINT operation = info[5 + index * 2] & 15;
+        UINT operand = info[5 + index * 2] >> 4;
+        UINT slots;
+        if (offset == 0 || offset > info[1] || offset <= ct->oldSize)
+            return FALSE;
+        switch (operation)
+        {
+        case 0: case 2: case 3: slots = 1; break;
+        case 1:
+            if (operand > 1) return FALSE;
+            slots = operand == 0 ? 2 : 3;
+            break;
+        case 4: case 8: slots = 2; break;
+        case 5: case 9: slots = 3; break;
+        case 10:
+            if (operand > 1) return FALSE;
+            slots = 1;
+            break;
+        default: return FALSE;
+        }
+        if (slots > count - index)
+            return FALSE;
+        index += slots;
+    }
+#else
+    (void)ct;
+#endif
+    return TRUE;
+}
+
 MTH_STATUS WINAPI MTH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID *ppOriginal)
 {
     MTH_STATUS status = MTH_OK;
@@ -1019,7 +1220,7 @@ MTH_STATUS WINAPI MTH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID *ppOrigi
                     ct.pTarget     = pTarget;
                     ct.pDetour     = pDetour;
                     ct.pTrampoline = pBuffer;
-                    if (MthInternal_CreateTrampolineFunction(&ct))
+                    if (MthInternal_CreateTrampolineFunction(&ct) && IsRelocationUnwindSafe(&ct))
                     {
                         PHOOK_ENTRY pHook = NULL;
                         if (FlushInstructionCache(GetCurrentProcess(), pBuffer, MEMORY_SLOT_SIZE))

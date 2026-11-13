@@ -65,6 +65,21 @@
       "id": "F13",
       "change": "Reject guarded/nonaccessible executable target and detour regions",
       "origin": "MithrilHook"
+    },
+    {
+      "id": "F14",
+      "change": "Retryable original-IP reconciliation against physically committed hook transitions",
+      "origin": "MithrilHook thread/batch/unwind audit"
+    },
+    {
+      "id": "F15",
+      "change": "Post-suspension stable-handle coverage observation refuses observed late live peers",
+      "origin": "MithrilHook thread/batch/unwind audit; final observation window remains documented"
+    },
+    {
+      "id": "F16",
+      "change": "Refuse unsupported registered x64 unwind-sensitive relocation before publishing a hook",
+      "origin": "MithrilHook thread/batch/unwind audit; conservative compatibility boundary"
     }
   ],
   "excluded_unreviewed_proposals": {

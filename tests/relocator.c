@@ -37,11 +37,13 @@ int main(void)
     check(!MthInternal_CreateTrampolineFunction(&ct), "reject negative signed displacement overflow");
     displacement=128; memcpy(code+67,&displacement,4);
     check(MthInternal_CreateTrampolineFunction(&ct), "accept representable displacement");
+    check(ct.oldSize==7, "relocated source span excludes the jump-back sentinel instruction");
     memcpy(&relocated,code+515,4);
     check((INT64)(code+519)+relocated==(INT64)(code+71)+displacement,
         "retain the exact RIP-relative effective address");
     memcpy(code+64,vex,sizeof vex);
     check(MthInternal_CreateTrampolineFunction(&ct), "accept VPMASKMOVD memory load");
+    check(ct.oldSize==5, "five-byte source prefix remains five bytes after jump-back emission");
     check(!memcmp(code+512,vex,5), "preserve VEX instruction instead of emitting Jcc");
     memcpy(code+64,xbegin,sizeof xbegin);
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");

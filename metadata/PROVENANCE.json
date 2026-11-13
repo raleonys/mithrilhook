@@ -18,6 +18,9 @@
     "same-thread recursive entry refusal",
     "independent MTH API and private helper namespace",
     "strict-only core",
-    "MithrilHook-only builds and distribution identity"
+    "MithrilHook-only builds and distribution identity",
+    "physical-state peer IP reconciliation and retained repair journal",
+    "post-suspension peer coverage refusal",
+    "conservative registered x64 unwind compatibility checks"
   ]
 }

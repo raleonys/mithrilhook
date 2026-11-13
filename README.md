@@ -29,6 +29,10 @@ unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 - Checked RIP-relative relocation, EIP wrapping, VEX classification, explicit
   rejection of unsupported relative instructions, and bounded code reads.
 - Alignment-safe decoder/displacement access and same-thread reentry refusal.
+- Post-suspension peer coverage checks and retryable IP reconciliation against
+  actual writes after failed preparation or partial batches.
+- Conservative x64 refusal when the relocated prefix needs unsupported unwind
+  operations or exception-handler metadata. See [Security audit](docs/SECURITY_AUDIT.md).
 
 Strict behavior is compiled directly into the core. There is no best-effort
 mode or opt-out from the ownership checks. No application repository, source

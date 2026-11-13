@@ -6,7 +6,10 @@ A circular luminous halo, three four-point stars, fine ornamental rules and
 engraved Roman serif lettering connect it to the approved library family.
 
 The approved master is `resources/branding/mithrilhook.png`, a 1536 x 1024 RGBA
-PNG. It is stored without pixel edits to the approved artwork. Preserve its
+PNG. Its emblem and ornaments have the approved five-pixel horizontal alignment
+adjustment; the wordmark and original rendered details are preserved without
+generative redrawing. The source-artwork hash and adjustment are recorded in
+`metadata/BRANDING.json`. Preserve its
 aspect ratio, wordmark, clear margins and color treatment. Do not stretch,
 recolor or place competing text over the emblem. This master is raster artwork;
 no editable vector master or separately drawn small icon is included.
