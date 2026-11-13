@@ -12,6 +12,24 @@ CALL_METRICS={'direct_call','detour_only','detour_original','original_trampoline
 CONCURRENT='concurrent_detour_original'
 COMMON={'activate_batch','complete_install','disable_batch','complete_remove','single_disable','single_enable','queued_or_transaction_disable','queued_or_transaction_enable'}
 SEPARATE=set(ENGINES)-{'detours','slim'}
+PROBES=['leaf','rip_load','relative_jump','relative_call','conditional_branch','loop_branch','hotpatch_short','registered_nonleaf','interior_entry','frame_byte_ch','handler_body','prefixed_call','prefixed_jump']+[f'prefixed_jcc_{n}' for n in range(16)]
+PROBE_ACCEPT={'leaf','rip_load','relative_jump','relative_call','conditional_branch','hotpatch_short','registered_nonleaf','frame_byte_ch'}
+def validate_probe(engine,case,result,bits,receipt):
+ if result['returncode']!=0:
+  assert result['status']=='FAILED',result
+  if engine=='mithrilhook':raise AssertionError('Current core failed compatibility case: '+case)
+  return
+ row=result['row'];status=row['status'];assert result['status']==status
+ if status=='NOT_APPLICABLE':
+  assert bits==32 and case in {'registered_nonleaf','interior_entry','frame_byte_ch','handler_body'}
+  return
+ assert row['engine']==engine and row['case']==case and row['cleanup'] is True
+ assert row['source_digest']==receipt['source_digest'] and row['input_digest']==receipt['input_digest']
+ assert status in {'CALL_BEHAVIOR_VERIFIED','CREATION_ONLY_NOT_SEMANTICALLY_VALIDATED','API_REJECTED'}
+ if engine=='mithrilhook':
+  assert status==('CALL_BEHAVIOR_VERIFIED' if case in PROBE_ACCEPT else 'API_REJECTED'),(case,row)
+  if bits==64 and case in {'relative_call','registered_nonleaf','frame_byte_ch'}:assert row['unwind']=='VERIFIED_EXACT_CALLER'
+
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def unique_pairs(pairs):
  result={}
@@ -31,7 +49,7 @@ def validate_child(entry,receipt):
  rows=entry['rows'];env=rows[0];end=rows[-1]
  assert env['type']=='environment' and env['engine']==entry['engine']
  assert env['source_digest']==receipt['source_digest'] and env['input_digest']==receipt['input_digest']
- assert env['compiler']==receipt['compiler'] and env['bits'] in (32,64)
+ assert env['compiler']==receipt['compiler'] and env['bits']==receipt['bits'] and env['bits'] in (32,64)
  assert (env['hooks'],env['peers'],env['callers'])==(entry['hooks'],entry['peers'],entry['callers']) and env['qpc_frequency']>0
  assert env['timer_overhead_ticks']>=0 and env['affinity']>0
  assert end=={'type':'complete','cycles':3,'hooks':entry['hooks'],'peers':entry['peers'],'callers':entry['callers'],'handle_baseline':end['handle_baseline'],'handle_final':end['handle_final'],'errors':0}
@@ -95,7 +113,7 @@ def check_controls():
    entry['rows'].append({'type':'sample','metric':name,'sample':index,'ticks':100,'operations':n,'checksum':checksum})
  for c in range(3):entry['rows'].append(dict(type='resources',cycle=c,**{k:0 for k in ['private_before','private_installed','private_after','exec_before','exec_installed','exec_after','cpu_install_100ns','cpu_remove_100ns']}))
  entry['rows'].append(dict(type='complete',cycles=3,hooks=1,peers=0,callers=0,handle_baseline=4,handle_final=4,errors=0))
- receipt={'source_digest':'s','input_digest':'i','compiler':'c'};validate_child(entry,receipt)
+ receipt={'source_digest':'s','input_digest':'i','compiler':'c','bits':64};validate_child(entry,receipt)
  for field in ['checksum','operations','sample']:
   bad=copy.deepcopy(entry);row=next(r for r in bad['rows'] if r.get('metric')=='direct_call');row[field]+=1
   try:validate_child(bad,receipt)
@@ -111,6 +129,17 @@ def audit(output):
   assert sha(output/'binaries'/f'bench_{name}.exe')==receipt['exe_sha256']
   assert receipt['source_digest']==manifest['source_digest'] and receipt['input_digest']==manifest['input_digest'] and receipt['configuration']=='Release'
  assert sha(output/'inputs.json')==manifest['input_digest'] and sha(output/'SOURCE_MANIFEST.json')==manifest['source_digest']
+ probe_receipts={name:read(output/'binaries'/f'probe_{name}.receipt.json') for name in ENGINES}
+ assert manifest['probe_cases']==PROBES and len(manifest['probes'])==len(ENGINES)*len(PROBES)
+ seen_probes=set()
+ for engine,receipt in probe_receipts.items():
+  assert sha(output/'binaries'/f'probe_{engine}.exe')==receipt['exe_sha256']
+  assert receipt['source_digest']==manifest['source_digest'] and receipt['input_digest']==manifest['input_digest']
+ for result in manifest['probes']:
+  engine,case=result['engine'],result['case'];assert engine in ENGINES and case in PROBES and (engine,case) not in seen_probes;seen_probes.add((engine,case))
+  for stream in ['stdout','stderr']:assert sha(output/'raw'/f'probe-{engine}-{case}.{stream}')==result[stream+'_sha256']
+  if result['returncode']==0:assert json.loads((output/'raw'/f'probe-{engine}-{case}.stdout').read_text())==result['row']
+  validate_probe(engine,case,result,probe_receipts[engine]['bits'],probe_receipts[engine])
  entries=[]
  assert len(manifest['children'])==len(ENGINES)*len(CASES)*ROUNDS
  for item in manifest['children']:
@@ -119,6 +148,10 @@ def audit(output):
  expected=analyze(entries,receipts,ROUNDS)
  assert read(output/'summary.json')==expected
  assert len(manifest['controls'])==len(ENGINES) and all(c['returncode']==1 and c['expected_failure']=='complete timed-call checksum' for c in manifest['controls'])
+ for control in manifest['controls']:
+  engine=control['engine'];assert engine in ENGINES
+  for stream in ['stdout','stderr']:assert sha(output/'raw'/f'control-{engine}.{stream}')==control[stream+'_sha256']
+  assert [line.split(' error=')[0] for line in (output/'raw'/f'control-{engine}.stderr').read_text().splitlines() if line.startswith('FAIL:')]==['FAIL: complete timed-call checksum']
  print('PASS: offline audit of source/build identities, complete recipe, checksums, raw hashes and recomputed statistics')
  return expected
 
@@ -136,16 +169,35 @@ def measure(build,output):
  shutil.copy2(inputs,output/'inputs.json');shutil.copy2(ROOT/'metadata/SOURCE_MANIFEST.json',output/'SOURCE_MANIFEST.json')
  receipts={}
  for engine in ENGINES:
-  exe=build/'Release'/f'bench_{engine}.exe';receipt=read(exe.with_suffix('.receipt.json'))
-  assert receipt['exe_sha256']==sha(exe) and receipt['source_digest']==sha(ROOT/'metadata/SOURCE_MANIFEST.json') and receipt['input_digest']==sha(inputs)
-  receipts[engine]=receipt
-  shutil.copy2(exe,output/'binaries'/exe.name);shutil.copy2(exe.with_suffix('.receipt.json'),output/'binaries'/exe.with_suffix('.receipt.json').name)
- manifest={'schema':'mithrilhook.benchmark-run.v1','run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count()},'engines':ENGINES,'cases':CASES,'rounds':ROUNDS,'seed':19473,'children':[],'controls':[]}
+  for prefix in ['bench','probe']:
+   exe=build/'Release'/f'{prefix}_{engine}.exe';receipt=read(exe.with_suffix('.receipt.json'))
+   assert receipt['exe_sha256']==sha(exe) and receipt['source_digest']==sha(ROOT/'metadata/SOURCE_MANIFEST.json') and receipt['input_digest']==sha(inputs)
+   if prefix=='bench':receipts[engine]=receipt
+   shutil.copy2(exe,output/'binaries'/exe.name);shutil.copy2(exe.with_suffix('.receipt.json'),output/'binaries'/exe.with_suffix('.receipt.json').name)
+ # Include redistribution notices with the retained benchmark binaries.
+ for relative in input_record['files']:
+  path=ROOT/relative
+  if path.name.lower().startswith(('license','copying','notice')):
+   dest=output/'licenses'/Path(relative).relative_to('build');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,dest)
+ for name in ['LICENSE','LICENSE.txt','LICENSE.SAFE_FREEZE','THIRD_PARTY_NOTICES.txt','metadata/BENCHMARK_SOURCES.json']:
+  dest=output/'licenses'/'mithrilhook'/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,dest)
+ manifest={'schema':'mithrilhook.benchmark-run.v1','run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count(),'power_policy':subprocess.run(['powercfg','/getactivescheme'],capture_output=True,text=True).stdout.strip()},'engines':ENGINES,'cases':CASES,'rounds':ROUNDS,'seed':19473,'children':[],'controls':[],'probe_cases':PROBES,'probes':[]}
+ for engine in ENGINES:
+  receipt=read(build/'Release'/f'probe_{engine}.receipt.json')
+  for case in PROBES:
+   result=subprocess.run([str(build/'Release'/f'probe_{engine}.exe'),case],capture_output=True,text=True,timeout=45)
+   item={'engine':engine,'case':case,'returncode':result.returncode,'status':'FAILED'}
+   for stream in ['stdout','stderr']:
+    path=output/'raw'/f'probe-{engine}-{case}.{stream}';path.write_text(getattr(result,stream));item[stream+'_sha256']=sha(path)
+   if result.returncode==0:item['row']=json.loads(result.stdout);item['status']=item['row']['status']
+   manifest['probes'].append(item);write(output/'run.json',manifest)
+   validate_probe(engine,case,item,receipt['bits'],receipt)
+ print('Completed source-form/creation/unwind compatibility matrix',flush=True)
  for engine in ENGINES:
   result=subprocess.run([str(build/'Release'/f'bench_{engine}.exe'),'1','0','corrupt-checksum'],capture_output=True,text=True,timeout=60)
   assert result.returncode==1 and [s.split(' error=')[0] for s in result.stderr.splitlines() if s.startswith('FAIL:')]==['FAIL: complete timed-call checksum'],(engine,result.returncode,result.stderr)
   (output/'raw'/f'control-{engine}.stdout').write_text(result.stdout);(output/'raw'/f'control-{engine}.stderr').write_text(result.stderr)
-  manifest['controls'].append({'engine':engine,'returncode':result.returncode,'expected_failure':'complete timed-call checksum'})
+  manifest['controls'].append({'engine':engine,'returncode':result.returncode,'expected_failure':'complete timed-call checksum','stdout_sha256':sha(output/'raw'/f'control-{engine}.stdout'),'stderr_sha256':sha(output/'raw'/f'control-{engine}.stderr')})
  entries=[];rng=random.Random(manifest['seed'])
  for round_number in range(ROUNDS):
   cases=list(CASES);rng.shuffle(cases)

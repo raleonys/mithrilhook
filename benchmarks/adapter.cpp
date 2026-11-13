@@ -11,9 +11,10 @@
 #endif
 void *originals[MAX_HOOKS]; // Persistent-address output slots, including MinHook-Detours.
 static void **ownedTargets,**ownedDetours;
-static unsigned ownedCount;
+static unsigned ownedCount,createdCount;
 bool engine_init()
 {
+ createdCount=0;
 #if defined(BACKEND_MTH)
  return MTH_Initialize()==MTH_OK;
 #elif defined(BACKEND_MH) || defined(BACKEND_MHD)
@@ -42,6 +43,7 @@ bool engine_create(void **targets,void **detours,unsigned count)
 #else
   originals[i]=targets[i]; // No equivalent separate create API: bookkeeping only.
 #endif
+  ++createdCount;
  }
  return true;
 }
@@ -92,10 +94,10 @@ bool engine_disable(HANDLE *peers,unsigned peerCount)
 bool engine_retire()
 {
 #if defined(BACKEND_MTH)
- for(unsigned i=0;i<ownedCount;++i)if(MTH_RemoveHook(ownedTargets[i])!=MTH_OK)return false;
+ for(unsigned i=0;i<createdCount;++i)if(MTH_RemoveHook(ownedTargets[i])!=MTH_OK)return false;
  return MTH_Uninitialize()==MTH_OK;
 #elif defined(BACKEND_MH) || defined(BACKEND_MHD)
- for(unsigned i=0;i<ownedCount;++i)if(MH_RemoveHook(ownedTargets[i])!=MH_OK)return false;
+ for(unsigned i=0;i<createdCount;++i)if(MH_RemoveHook(ownedTargets[i])!=MH_OK)return false;
  return MH_Uninitialize()==MH_OK;
 #else
  return true; // Detach commit already performs backend retirement.
