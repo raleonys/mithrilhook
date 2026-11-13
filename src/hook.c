@@ -1142,6 +1142,20 @@ static BOOL IsNonvolatileUnwindRegister(UINT reg)
     return reg == 3 || reg == 5 || reg == 6 || reg == 7 || (reg >= 12 && reg <= 15);
 }
 
+static BOOL SupportsGeneratedUnwindV2(VOID)
+{
+    typedef LONG (NTAPI *RTL_GET_VERSION)(LPOSVERSIONINFOW);
+    RTL_GET_VERSION getVersion = (RTL_GET_VERSION)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion");
+    OSVERSIONINFOW version;
+    if (getVersion == NULL)
+        return FALSE;
+    memset(&version, 0, sizeof(version));
+    version.dwOSVersionInfoSize = sizeof(version);
+    /* This bounded generated format is supported on Windows 10 and later.
+     * Older/unknown systems retain strict refusal of nonleaf relocation. */
+    return getVersion(&version) >= 0 && version.dwMajorVersion >= 10;
+}
+
 static BOOL MapUnwindOffset(const TRAMPOLINE *ct, UINT offset, BYTE *mapped)
 {
     UINT i;
@@ -1161,8 +1175,9 @@ static BOOL MapUnwindOffset(const TRAMPOLINE *ct, UINT offset, BYTE *mapped)
 #endif
 
 /* Describe only the operations actually present in the relocated prefix.
- * The synthetic prologue extends through the entire jump-back instruction/data;
- * otherwise Windows can mistake FF25 for an already-restored tail-call epilogue.
+ * Version 2 has explicit epilogue descriptions; an empty epilogue set prevents
+ * FF25 from being mistaken for an already-restored tail-call epilogue. Version 1
+ * instruction scanning cannot safely describe this stack-changing jump-back.
  * Language scopes and unknown/chained source formats remain unsupported. */
 static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
 {
@@ -1250,6 +1265,8 @@ static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
     }
     if (output == 0)
         return TRUE; /* No copied stack/nonvolatile operation: leaf fallback remains valid. */
+    if (!SupportsGeneratedUnwindV2())
+        return FALSE;
     if (ct->oldSize > info[1])
     {
         for (index = 0; index < ct->nIP && ct->oldIPs[index] < ct->oldSize; ++index)
@@ -1265,7 +1282,7 @@ static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
     }
     if (ct->newSize == 0 || ct->codeSize < ct->newSize || ct->codeSize > MEMORY_CODE_SIZE)
         return FALSE;
-    generated->info[0] = 1;
+    generated->info[0] = 2;
     generated->info[1] = ct->codeSize;
     generated->info[2] = (BYTE)output;
     generated->info[3] = copiedFrame ? info[3] : 0;

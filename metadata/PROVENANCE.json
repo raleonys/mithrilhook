@@ -22,7 +22,7 @@
     "physical-state peer IP reconciliation and retained repair journal",
     "post-suspension peer coverage refusal",
     "conservative registered x64 unwind compatibility checks",
-    "owned version-1 x64 prefix unwind metadata covering the jump-back",
+    "owned version-2 x64 prefix unwind metadata covering the jump-back",
     "retryable function-table/storage ownership with registry calls outside suspension windows",
     "mandatory eleven-target create/remove compatibility gate on the pinned native runner"
   ]

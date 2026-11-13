@@ -34,12 +34,16 @@ the jump-back is not mistaken for a copied source instruction. Frame-register
 metadata is retained only if frame setup was actually copied. No registration
 is needed when the copied prefix remains leaf-unwindable.
 
+Generated entries use version 2 on Windows 10 and later. Older or unknown
+systems retain strict refusal when the copied prefix needs nonleaf metadata.
 The complete main code range is described as a synthetic prologue. Copied body instructions
 are admitted only when their stack/frame state remains described by those
 operations. The synthetic prologue extends through the absolute jump-back
-instruction and its data. This prevents
+instruction and its data. Version 2 declares no epilogues, preventing
 Windows from mistaking FF25 for a tail-call epilogue with an already-restored
-stack. The relay, entered before the original prologue, remains leaf-unwindable.
+stack. Native diagnostics demonstrated that version-1 instruction scanning
+misclassifies this jump even when SizeOfProlog covers it; extending the version-1
+prologue or adding a chained fragment is insufficient. The relay, entered before the original prologue, remains leaf-unwindable.
 
 ## Publication, retirement and failure ownership
 

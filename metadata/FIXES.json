@@ -83,7 +83,7 @@
     },
     {
       "id": "F17",
-      "change": "Owned bounded x64 prefix unwind metadata with a synthetic prologue covering the complete jump-back",
+      "change": "Owned bounded version-2 x64 prefix unwind metadata with a synthetic prologue covering the complete jump-back",
       "origin": "MithrilHook x64 compatibility follow-up"
     },
     {

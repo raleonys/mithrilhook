@@ -23,7 +23,8 @@ activation/deactivation.
 
 On x64, registered source functions are checked against their runtime-function
 metadata. Supported prefixes receive fixed-address generated runtime entries
-before publication. Unknown/chained source formats, untranslated handler-bearing
+before publication on Windows 10 and later. Older or unknown systems retain
+strict refusal when nonleaf metadata is needed. Unknown/chained source formats, untranslated handler-bearing
 bodies, interior nonleaf entries and undescribed stack/frame changes return
 MTH_ERROR_UNSUPPORTED_FUNCTION. Registration failures return
 MTH_ERROR_MEMORY_PROTECT without publishing an original. See UNWIND.md.
