@@ -43,7 +43,9 @@ an unrecoverable failure.
    foreign patching. The consumer must control those lifetimes.
 4. The decoder and relocated instruction forms are finite. The #363 changes
    improve specific RIP/EIP/VEX/relative cases, not all future ISA encodings.
-   Copied REX2/APX forms are refused: recognizing their lengths does not provide
+   A relocated RIP-relative load or store of the five-byte hook patch is
+   refused; LEA and accesses outside that window are unchanged. Copied
+   REX2/APX forms are refused: recognizing their lengths does not provide
    a complete engine register/unwind/mitigation contract. No APX execution is
    implied by decoder or refusal tests. CALL-next address-discovery idioms are
    also refused before publication. More generally, a relocated CALL changes
