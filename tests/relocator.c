@@ -13,6 +13,45 @@ static void check(BOOL condition, const char *description)
     if (!condition) { fprintf(stderr, "FAIL: %s\n", description); exit(1); }
 }
 
+static void byte_alias_cases(BYTE *code)
+{
+    const BYTE nonRex[]={0,1,2,3,0,1,2,3};
+    const UINT frames[]={0,3,5,6,7,12,13,14,15};
+    /* Immediate, r/m destination and reg destination families, plus SETcc.
+     * Group selectors remain raw opcode extensions, never normalized registers. */
+    const BYTE forms[][4]={
+        {0xb0,0,0x12,0}, {0xc6,0,0x12,0}, {0x88,0,0,0},
+        {0x86,0,0,0}, {0x00,0,0,0}, {0x80,0,1,0},
+        {0xfe,0,0,0}, {0xf6,2,0,0}, {0xc0,4,1,0},
+        {0xd0,4,0,0}, {0xd2,4,0,0}, {0x0f,0x95,0,0},
+        {0x8a,0,0,1}, {0x02,0,0,1}
+    };
+    UINT prefix,encoded,frame,form;
+    for(prefix=0;prefix<3;++prefix)
+    for(encoded=0;encoded<8;++encoded)
+    for(frame=0;frame<sizeof(frames)/sizeof(frames[0]);++frame)
+    for(form=0;form<sizeof(forms)/sizeof(forms[0]);++form)
+    {
+        UINT n=0,reg=prefix==0?nonRex[encoded]:prefix==1?encoded:encoded+8;
+        BOOL expected=reg!=4 && (frames[frame]==0 || reg!=frames[frame]);
+        BOOL destinationReg=forms[form][3]!=0;
+        if(prefix)code[n++]=(BYTE)(prefix==1?0x40:destinationReg?0x44:0x41);
+        if(forms[form][0]==0xb0){code[n++]=(BYTE)(0xb0+encoded);code[n++]=0x12;}
+        else if(forms[form][0]==0x0f){code[n++]=0x0f;code[n++]=0x95;code[n++]=(BYTE)(0xc0+encoded);}
+        else
+        {
+            code[n++]=forms[form][0];
+            code[n++]=(BYTE)(0xc0+(destinationReg?encoded*8:forms[form][1]*8+encoded));
+            if(forms[form][0]==0xc6 || forms[form][0]==0x80 || forms[form][0]==0xc0)code[n++]=forms[form][2];
+        }
+        check(MthInternal_IsUnwindNeutralInstruction(code,n,frames[frame])==expected,
+            "byte destination aliases respect RSP/frame ownership with and without REX");
+    }
+    { const BYTE word[]={0x66,0xbd,0x12,0x34};
+      memcpy(code,word,sizeof(word));
+      check(!MthInternal_IsUnwindNeutralInstruction(code,sizeof(word),5),"word BP write remains protected"); }
+}
+
 int main(void)
 {
     SYSTEM_INFO info;
@@ -58,6 +97,7 @@ int main(void)
         memcpy(code+128,frame,sizeof(frame));
         check(!MthInternal_IsUnwindNeutralInstruction(code+128,sizeof(frame),5),"refuse body modification of the active frame register");
     }
+    byte_alias_cases(code+128);
     memset(code,0x90,info.dwPageSize);
     code[info.dwPageSize-1]=0xc3;
     check(VirtualProtect(code+info.dwPageSize,info.dwPageSize,PAGE_NOACCESS,&old),
