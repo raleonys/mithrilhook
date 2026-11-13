@@ -29,6 +29,12 @@ bodies, interior nonleaf entries and undescribed stack/frame changes return
 MTH_ERROR_UNSUPPORTED_FUNCTION. Registration failures return
 MTH_ERROR_MEMORY_PROTECT without publishing an original. See UNWIND.md.
 
+A copied CALL-next/get-PC idiom or unsupported x64 REX2/APX instruction returns
+MTH_ERROR_UNSUPPORTED_FUNCTION before original-pointer publication. These forms
+are refused, not emulated with stack operations that bypass control-flow
+mitigations. Ordinary relative CALL remains supported within the documented
+scope; general return-address introspection is not preserved by relocation.
+
 MTH_ALL_HOOKS selects the owned set for the documented enable/disable/queue
 operations. Removal remains target-specific; uninitialize retires the complete
 engine after the required quiescence. An already initialized engine must not be

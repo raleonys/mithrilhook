@@ -16,6 +16,10 @@ tested subset instead of accepting unregistered stack-changing trampolines.
 - For handlerless functions with a short prologue, a finite whitelist of copied
   body instructions that do not alter RSP or the active frame register.
 
+REX2/APX forms are not admitted as copied instructions or as unwind-neutral
+body instructions. Decoder prefix recognition is distinct from APX register,
+Windows ABI/unwind and hardware execution support.
+
 Source chains, unrecognized versions/operations, interior entries, untranslated
 language-handler scopes in the copied body, and undescribed body stack/frame
 changes are refused. Unregistered source code must already be ABI-valid and
