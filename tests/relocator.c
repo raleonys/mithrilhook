@@ -148,6 +148,25 @@ int main(void)
     memcpy(&relocated,code+515,4);
     check((INT64)(code+519)+relocated==(INT64)(code+71)+displacement,
         "retain the exact RIP-relative effective address");
+    {
+        const BYTE self[] = {0x8B,0x05,0xFA,0xFF,0xFF,0xFF,0xC3};
+        const BYTE overlap[] = {0x8B,0x05,0xF9,0xFF,0xFF,0xFF,0xC3};
+        const BYTE lea[] = {0x48,0x8D,0x05,0xF9,0xFF,0xFF,0xFF,0xC3};
+        const BYTE outside[] = {0x8B,0x05,0x01,0x00,0x00,0x00,0xC3,0x2A,0x00,0x00,0x00};
+        memset(code + 64, 0x90, 64);
+        memcpy(code + 64, self, sizeof(self));
+        check(!MthInternal_CreateTrampolineFunction(&ct),
+            "refuse a RIP-relative load of the bytes the hook jump will overwrite");
+        memcpy(code + 64, overlap, sizeof(overlap));
+        check(!MthInternal_CreateTrampolineFunction(&ct),
+            "refuse a RIP-relative load that only partly covers the hook patch");
+        memcpy(code + 64, lea, sizeof(lea));
+        check(MthInternal_CreateTrampolineFunction(&ct),
+            "LEA of the patched entry keeps the address and remains publishable");
+        memcpy(code + 64, outside, sizeof(outside));
+        check(MthInternal_CreateTrampolineFunction(&ct),
+            "RIP-relative load completely outside the hook patch remains publishable");
+    }
     memcpy(code+64,vex,sizeof vex);
     check(MthInternal_CreateTrampolineFunction(&ct), "accept VPMASKMOVD memory load");
     check(ct.oldSize==5, "five-byte source prefix remains five bytes after jump-back emission");

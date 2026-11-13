@@ -5,6 +5,10 @@ There is no published release or release tag. The CMake project version is
 
 ## Unreleased
 
+- Refuse a relocated x64 RIP-relative load or store of the five bytes the hook
+  jump overwrites. LEA and accesses completely outside that window keep the
+  absolute-address fixup; the adjusted trampoline is not used as a raw image.
+
 - Resolve internal JMP/Jcc/LOOP destinations through the completed instruction
   map so backward branches remain correct after an earlier Jcc expansion.
 - Refuse internal targets without a decoded instruction-boundary mapping;

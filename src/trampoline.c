@@ -232,6 +232,49 @@ BOOL MthInternal_IsUnwindNeutralInstruction(LPCVOID address, UINT length, UINT f
 #endif
 }
 
+#if defined(_M_X64) || defined(__x86_64__)
+/* 0 means this ModR/M form does not read or write memory (LEA, multi-byte NOP).
+ * Unrecognized memory forms use 64 bytes so a possible overlap with the
+ * overwritten entry is refused instead of published. */
+static UINT RipMemoryAccessSize(const HDE *hs)
+{
+    UINT op = hs->opcode;
+
+    if (op == 0x8D || (op == 0x0F && hs->opcode2 == 0x1F))
+        return 0;
+    if (op == 0xFF && (hs->modrm_reg == 2 || hs->modrm_reg == 4 || hs->modrm_reg == 6))
+        return 8;
+    if (op == 0x8F && hs->modrm_reg == 0)
+        return hs->rex_w || !hs->p_66 ? 8 : 2;
+    if (op <= 0x3B && (op & 7) <= 3)
+        return (op & 1) == 0 ? 1 : (hs->rex_w ? 8 : (hs->p_66 ? 2 : 4));
+    if (op == 0x80 || op == 0x82 || op == 0x86 || op == 0x88 || op == 0x8A ||
+        op == 0xC6 || op == 0xF6 || op == 0xFE)
+        return 1;
+    if (op == 0x81 || op == 0x83 || op == 0x87 || op == 0x89 || op == 0x8B ||
+        op == 0xC7 || op == 0xF7)
+        return hs->rex_w ? 8 : (hs->p_66 ? 2 : 4);
+    if (op == 0x0F && (hs->opcode2 == 0xB6 || hs->opcode2 == 0xBE))
+        return 1;
+    if (op == 0x0F && (hs->opcode2 == 0xB7 || hs->opcode2 == 0xBF))
+        return 2;
+    if (op == 0x0F && hs->p_rep == 0xF3 && (hs->opcode2 == 0x10 || hs->opcode2 == 0x11))
+        return 4;
+    if (op == 0x0F && hs->p_rep == 0xF2 && (hs->opcode2 == 0x10 || hs->opcode2 == 0x11))
+        return 8;
+    return 64;
+}
+
+static BOOL MemoryAccessHitsHookPatch(ULONG_PTR target, ULONG_PTR address, UINT size)
+{
+    if (size == 0)
+        return FALSE;
+    if (size > ~(ULONG_PTR)0 - address)
+        return TRUE;
+    return address < target + sizeof(JMP_REL) && address + size > target;
+}
+#endif
+
 //-------------------------------------------------------------------------
 BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 {
@@ -346,11 +389,23 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         else if ((hs.modrm & 0xC7) == 0x05)
         {
             // Instructions using RIP relative addressing. (ModR/M = 00???101B)
-
-            // Modify the RIP relative address.
+            // The hook replaces the first JMP_REL bytes. A relocated load or
+            // store of that window would observe the published JMP, not the
+            // original bytes. LEA keeps the address. The trampoline copy is
+            // already displacement-adjusted, so it is not a raw image and the
+            // operand is refused rather than retargeted.
             LPBYTE pRelAddr;
             UINT32 displacement;
+            INT64 absoluteAddress = (INT64)pOldInst + hs.len + (INT32)hs.disp.disp32;
+            ULONG_PTR effective = (hs.flags & F_PREFIX_67)
+                ? (ULONG_PTR)(UINT32)absoluteAddress
+                : (ULONG_PTR)absoluteAddress;
 
+            if (MemoryAccessHitsHookPatch((ULONG_PTR)ct->pTarget, effective,
+                    RipMemoryAccessSize(&hs)))
+                return FALSE;
+
+            // Modify the RIP relative address.
             // Relative address is stored at (instruction length - immediate value length - 4).
             pRelAddr = (LPBYTE)(instBuf + hs.len - ((hs.flags & 0x3C) >> 2) - 4);
             if (hs.flags & F_PREFIX_67)

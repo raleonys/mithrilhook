@@ -120,6 +120,11 @@
       "id": "F24",
       "change": "Resolve internal JMP/Jcc/LOOP displacements through the completed instruction map; refuse unmapped boundaries and preserve forward-span growth refusals",
       "origin": "MithrilHook review #13; inherited backward-branch offset corruption after an earlier Jcc expansion"
+    },
+    {
+      "id": "F25",
+      "change": "Refuse relocated x64 RIP-relative loads and stores of the five-byte hook patch; keep LEA and accesses outside that window on the absolute-address fixup",
+      "origin": "MithrilHook; relocated self-read observed the published JMP instead of the original bytes"
     }
   ],
   "excluded_unreviewed_proposals": {
