@@ -135,6 +135,11 @@
       "id": "F27",
       "change": "Apply effective REX.W precedence over 66 for the full RIP-relative PUSH memory range and preserve proven disjoint controls",
       "origin": "MithrilHook review #17; operand-size underestimation introduced in the F25 range guard"
+    },
+    {
+      "id": "F28",
+      "change": "Refuse copied relative CALL destinations inside the five-byte entry patch before original publication; preserve ordinary outside CALLs",
+      "origin": "MithrilHook review #18; inherited absolute-CALL fixup retains a callee in overwritten source bytes"
     }
   ],
   "excluded_unreviewed_proposals": {

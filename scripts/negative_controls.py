@@ -26,6 +26,11 @@ EXTRA={
  'coverage':('static MTH_STATUS VerifyFrozenThreadCoverage(PFROZEN_THREADS pThreads)\n{','MTH_OK','FAIL: peer born after enumeration rejects mutation before patching'),
  'unwind':('static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)\n{','TRUE',None),
 }
+CALL_GUARD='''            if (dest >= (ULONG_PTR)ct->pTarget &&
+                dest - (ULONG_PTR)ct->pTarget < sizeof(JMP_REL))
+                return FALSE;
+'''
+TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before original publication'}
 def prepare(output):
  output=Path(output).resolve()
  if not output.is_relative_to((ROOT/'build').resolve()):
@@ -48,6 +53,13 @@ def prepare(output):
  anchor='ip = hook->isEnabled ? FindNewIP(hook, desired) : FindOldIP(hook, desired);'
  if source.count(anchor)!=1:raise ValueError('Missing unique disable-action anchor')
  (output/'stale.c').write_text(source.replace(anchor,'ip = hook->isEnabled ? FindNewIP(hook, desired) : 0;',1))
+ trampoline=(ROOT/'src/trampoline.c').read_bytes()
+ expected=json.loads((ROOT/'metadata/SOURCE_MANIFEST.json').read_text())['files']['src/trampoline.c']
+ if hashlib.sha256(trampoline).hexdigest()!=expected:
+  raise ValueError('Relocator control source does not match the reviewed inventory')
+ trampoline=trampoline.decode()
+ if trampoline.count(CALL_GUARD)!=1:raise ValueError('Missing unique internal CALL refusal')
+ (output/'internal-call.c').write_text(trampoline.replace(CALL_GUARD,'',1))
 def run(mode,command):
  result=subprocess.run(command,capture_output=True,text=True,timeout=35)
  print(result.stdout,end='');print(result.stderr,end='',file=sys.stderr)
@@ -62,7 +74,7 @@ def run(mode,command):
   if result.returncode!=42 or failures or 'SINGLE_DISABLE_IP_MISMATCH: real IP retained the trampoline/relay address' not in lines or 'REAL_PEER_CLEANUP: PASS original context restored, worker joined, handle count restored' not in lines:
    raise RuntimeError('Stale-action control did not prove the precise mismatch and complete cleanup')
   print('PASS: exact negative control stale, complete cleanup');return
- expected=EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
+ expected=TRAMPOLINE_CONTROLS[mode] if mode in TRAMPOLINE_CONTROLS else EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
  if result.returncode!=1 or failures!=[expected]:
   raise RuntimeError('Control did not fail only at its required assertion: '+mode)
  print('PASS: exact negative control '+mode)
@@ -70,7 +82,7 @@ def main():
  parser=argparse.ArgumentParser(description=__doc__)
  sub=parser.add_subparsers(dest='operation',required=True)
  p=sub.add_parser('prepare');p.add_argument('--output',required=True)
- p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,"stale"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
+ p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,*TRAMPOLINE_CONTROLS,"stale"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
  args=parser.parse_args()
  if args.operation=='prepare':prepare(args.output)
  else:

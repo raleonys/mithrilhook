@@ -21,10 +21,13 @@ instruction relocation. **It is not a production acceptance or universal
 unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
 
-The merged baseline through PR #16 passed 192 native Windows/package tests and
-two portable sanitizer tests. The candidate adds the PUSH range-precedence
-correction and real Windows unwind/execution cases; its exact-source validation
-and performance gates are recorded in [PR #17](https://github.com/raleonys/mithrilhook/pull/17).
+The merged baseline through PR #17 passed 196 native Windows/package tests and
+two portable sanitizer tests. A subsequent internal-CALL failure is corrected
+in [PR #18](https://github.com/raleonys/mithrilhook/pull/18) by refusing callee
+destinations inside the entry patch before publication. Release publication
+awaits that correction and its fresh exact-source Windows validation.
+Completed [PR #17](https://github.com/raleonys/mithrilhook/pull/17) benchmark
+results remain pinned to the preceding source.
 Native hook-engine comparisons retain source-specific reports and raw evidence; see
 [Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 

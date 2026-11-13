@@ -35,6 +35,11 @@ benchmark uses `install_hooks=false` and cannot rank hook engines either.
 - The 1.0.0-rc.1 candidate's exact-head broad run is tracked in
   [PR #17](https://github.com/raleonys/mithrilhook/pull/17). Cite its completed
   run and artifacts for the PUSH correction and candidate version.
+  Exact source `f006e53116b61ed9baabec025ed6bb26a7c6c7eb`,
+  [43494694136](https://github.com/raleonys/mithrilhook/actions/runs/43494694136):
+  all five environments and five independent offline re-audits passed,
+  10,640 positive children. This predates #18's internal-CALL refusal; it is
+  not a timing measurement of the later source.
 
 ## Immutable candidates and build context
 
