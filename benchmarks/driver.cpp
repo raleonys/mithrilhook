@@ -64,18 +64,60 @@ static void calls(const char *metric,Function function,unsigned increment)
  }
  measuredFunction=nullptr;
 }
+struct CallWorker
+{
+    HANDLE start,ready;Function function;unsigned long long sum;
+};
+static DWORD WINAPI call_worker(void *argument)
+{
+    auto *worker=static_cast<CallWorker*>(argument);
+    for(unsigned i=0;i<1000;++i)if(worker->function(i&1023)!=int((i&1023)+9))return 1;
+    SetEvent(worker->ready);
+    if(WaitForSingleObject(worker->start,INFINITE)!=WAIT_OBJECT_0)return 2;
+    unsigned long long sum=0;
+    for(unsigned i=0;i<500000;++i)sum+=worker->function(i&1023);
+    worker->sum=sum;return 0;
+}
+static void concurrent_calls(Function function,unsigned callers)
+{
+    constexpr unsigned n=500000,g=n/1024,r=n%1024;
+    const unsigned long long expected=(static_cast<unsigned long long>(g)*1023*1024/2+static_cast<unsigned long long>(r)*(r-1)/2+static_cast<unsigned long long>(n)*9)*callers;
+    for(unsigned sampleIndex=0;sampleIndex<3;++sampleIndex)
+    {
+        CallWorker workers[64]{};HANDLE handles[64]{},readyEvents[64]{};
+        HANDLE start=CreateEventW(nullptr,TRUE,FALSE,nullptr);require(start!=nullptr,"concurrent start gate");
+        for(unsigned i=0;i<callers;++i)
+        {
+            readyEvents[i]=CreateEventW(nullptr,TRUE,FALSE,nullptr);require(readyEvents[i]!=nullptr,"concurrent ready gate");
+            workers[i]={start,readyEvents[i],function,0};handles[i]=CreateThread(nullptr,0,call_worker,&workers[i],0,nullptr);require(handles[i]!=nullptr,"create steady call worker");
+        }
+        require(WaitForMultipleObjects(callers,readyEvents,TRUE,10000)==WAIT_OBJECT_0,"all steady workers warmed and ready");
+        long long begin=tick();require(SetEvent(start)!=0,"release steady workers");
+        require(WaitForMultipleObjects(callers,handles,TRUE,60000)==WAIT_OBJECT_0,"steady workers completed");long long elapsed=tick()-begin;
+        unsigned long long total=0;
+        for(unsigned i=0;i<callers;++i)
+        {
+            DWORD code;require(GetExitCodeThread(handles[i],&code)!=0&&code==0,"steady worker result");total+=workers[i].sum;
+            require(CloseHandle(handles[i])&&CloseHandle(readyEvents[i]),"retire steady worker handles");
+        }
+        require(total==expected,"complete concurrent-call checksum");require(CloseHandle(start)!=0,"retire steady start gate");
+        sample("concurrent_detour_original",sampleIndex,elapsed,n*callers,total);
+    }
+}
+
 int main(int argc,char **argv)
 {
- require(argc==3||argc==4,"usage: driver hooks peers [corrupt-checksum]");
+ require(argc==3||argc==4,"usage: driver hooks peers [callers|corrupt-checksum]");
  unsigned count=std::strtoul(argv[1],nullptr,10),peerCount=std::strtoul(argv[2],nullptr,10);
  require(count>0&&count<=MAX_HOOKS&&peerCount<=64,"bounded benchmark recipe");
  corruptChecksum=argc==4&&!std::strcmp(argv[3],"corrupt-checksum");
+ unsigned callers=argc==4&&!corruptChecksum?std::strtoul(argv[3],nullptr,10):0;require(callers<=64,"bounded steady caller count");
  DWORD baseline,finalHandles;require(GetProcessHandleCount(GetCurrentProcess(),&baseline)!=0,"initial handle baseline");
  DWORD_PTR processMask,systemMask;require(GetProcessAffinityMask(GetCurrentProcess(),&processMask,&systemMask)!=0&&processMask!=0,"process affinity");
  DWORD_PTR selected=processMask&(~processMask+1);require(SetThreadAffinityMask(GetCurrentThread(),selected)!=0,"pin measurement thread to first allowed CPU");
  SYSTEM_INFO system;GetSystemInfo(&system);LARGE_INTEGER frequency;require(QueryPerformanceFrequency(&frequency)!=0,"QPC frequency");
  long long timerOverhead=LLONG_MAX;for(unsigned i=0;i<10000;++i){long long a=tick(),b=tick();if(b-a<timerOverhead)timerOverhead=b-a;}
- std::printf("{\"type\":\"environment\",\"engine\":\"%s\",\"source_digest\":\"%s\",\"input_digest\":\"%s\",\"compiler\":\"%s\",\"bits\":%u,\"hooks\":%u,\"peers\":%u,\"qpc_frequency\":%lld,\"timer_overhead_ticks\":%lld,\"logical_processors\":%lu,\"affinity\":%llu,\"contract\":\"%s\"}\n",BENCH_ENGINE,BENCH_SOURCE_DIGEST,BENCH_INPUT_DIGEST,BENCH_COMPILER,unsigned(sizeof(void*)*8),count,peerCount,frequency.QuadPart,timerOverhead,system.dwNumberOfProcessors,static_cast<unsigned long long>(selected),engine_contract());
+ std::printf("{\"type\":\"environment\",\"engine\":\"%s\",\"source_digest\":\"%s\",\"input_digest\":\"%s\",\"compiler\":\"%s\",\"bits\":%u,\"hooks\":%u,\"peers\":%u,\"callers\":%u,\"qpc_frequency\":%lld,\"timer_overhead_ticks\":%lld,\"logical_processors\":%lu,\"affinity\":%llu,\"contract\":\"%s\"}\n",BENCH_ENGINE,BENCH_SOURCE_DIGEST,BENCH_INPUT_DIGEST,BENCH_COMPILER,unsigned(sizeof(void*)*8),count,peerCount,callers,frequency.QuadPart,timerOverhead,system.dwNumberOfProcessors,static_cast<unsigned long long>(selected),engine_contract());
  HANDLE peers[64]{},ready[64]{};PeerContext contexts[64]{};
  HANDLE stop=CreateEventW(nullptr,TRUE,FALSE,nullptr);require(stop!=nullptr,"peer stop event");
  for(unsigned i=0;i<peerCount;++i){ready[i]=CreateEventW(nullptr,TRUE,FALSE,nullptr);require(ready[i]!=nullptr,"peer ready event");contexts[i]={stop,ready[i]};peers[i]=CreateThread(nullptr,0,idle_peer,&contexts[i],0,nullptr);require(peers[i]!=nullptr,"create idle peer");require(WaitForSingleObject(ready[i],5000)==WAIT_OBJECT_0,"peer readiness");}
@@ -109,7 +151,7 @@ int main(int argc,char **argv)
   sample("activate_batch",cycle,installed-enableStart,count);sample("complete_install",cycle,installed-install,count);
   callMode=0;
   for(unsigned i=0;i<count;++i){require(reinterpret_cast<Function>(targets[i])(3)==int(i+12),"every enabled target has its distinct detour result");require(std::memcmp(targets[i],saved[i],16)!=0,"every enabled target was patched");require(originals[i]!=nullptr,"published original slot");require(reinterpret_cast<Function>(originals[i])(3)==int(i+10),"every enabled original restores distinct source behavior");}
-  if(cycle==0){calls("detour_only",reinterpret_cast<Function>(targets[0]),9);callMode=1;calls("detour_original",reinterpret_cast<Function>(targets[0]),9);calls("original_trampoline",reinterpret_cast<Function>(originals[0]),7);callMode=0;}
+  if(cycle==0){calls("detour_only",reinterpret_cast<Function>(targets[0]),9);callMode=1;calls("detour_original",reinterpret_cast<Function>(targets[0]),9);calls("original_trampoline",reinterpret_cast<Function>(originals[0]),7);if(callers)concurrent_calls(reinterpret_cast<Function>(targets[0]),callers);callMode=0;}
   long long toggle=tick();require(engine_single(false,peers,peerCount),"single disable/detach");long long toggled=tick();sample("single_disable",cycle,toggled-toggle,1);
   require(reinterpret_cast<Function>(targets[0])(3)==10,"single-disabled source behavior");
   toggle=tick();require(engine_single(true,peers,peerCount),"single enable/attach");toggled=tick();sample("single_enable",cycle,toggled-toggle,1);
@@ -132,6 +174,6 @@ int main(int argc,char **argv)
  for(unsigned i=0;i<peerCount;++i){require(WaitForSingleObject(peers[i],5000)==WAIT_OBJECT_0,"join idle peer");DWORD code;require(GetExitCodeThread(peers[i],&code)!=0&&code==0,"idle peer completed successfully");require(CloseHandle(peers[i])&&CloseHandle(ready[i]),"retire peer handles");}
  require(CloseHandle(stop)!=0&&VirtualFree(arena,0,MEM_RELEASE)!=0,"retire fixture owners");
  require(GetProcessHandleCount(GetCurrentProcess(),&finalHandles)!=0&&finalHandles==baseline,"restore process handle baseline");
- std::printf("{\"type\":\"complete\",\"cycles\":3,\"hooks\":%u,\"peers\":%u,\"handle_baseline\":%lu,\"handle_final\":%lu,\"errors\":0}\n",count,peerCount,baseline,finalHandles);
+ std::printf("{\"type\":\"complete\",\"cycles\":3,\"hooks\":%u,\"peers\":%u,\"callers\":%u,\"handle_baseline\":%lu,\"handle_final\":%lu,\"errors\":0}\n",count,peerCount,callers,baseline,finalHandles);
  return 0;
 }
