@@ -17,6 +17,9 @@
   controls and added a reproducible source inventory.
 - Run feature-branch validation through pull requests and reserve push validation
   for main branches, avoiding duplicate checks on the same pull-request commit.
+- Include the approved MithrilHook logo in the README and installed package,
+  document its visual identity, and distinguish the GPL-3.0-only distribution
+  license from retained third-party BSD notices.
 
 This entry describes an unmerged development candidate, not a published stable
 release or native acceptance of the final MithrilHook source.

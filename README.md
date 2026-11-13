@@ -1,5 +1,12 @@
 # MithrilHook
 
+<p align="center">
+  <img src="resources/branding/mithrilhook.png" alt="MithrilHook silver M and hook emblem with an ice-blue crystal" width="760">
+</p>
+
+**Distribution license: [GPL-3.0-only](LICENSE).** Original third-party notices
+are retained separately; they are not alternative licenses for the complete fork.
+
 MithrilHook is an independently maintained Windows x86/x64 function-hooking
 library derived from MinHook. It has its own **MTH_*** API, build targets,
 package identity and version history. There is no legacy API alias header.
@@ -95,9 +102,20 @@ candidate; relocation hardening and selected tests come from Citrine PR #363.
 Exact revisions and changes are in [PROVENANCE.json](metadata/PROVENANCE.json)
 and [FIXES.json](metadata/FIXES.json).
 
-The current combined distribution and fork additions use **GPL-3.0-only**,
-retaining the original MinHook/HDE and separately authorized SAFE-FREEZE BSD
-notices. Read [LICENSE](LICENSE), [LICENSE.txt](LICENSE.txt),
-[LICENSE.SAFE_FREEZE](LICENSE.SAFE_FREEZE) and
-[THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). No existing third-party
-copyright or grant is removed or silently reassigned.
+The complete MithrilHook distribution and fork additions use **GPL-3.0-only**.
+The root [LICENSE](LICENSE) is the distribution license. The other two files
+preserve the terms and attribution of inherited contributions:
+
+| File | Scope |
+| --- | --- |
+| [LICENSE](LICENSE) | GPL-3.0-only for the combined fork and MithrilHook additions |
+| [LICENSE.txt](LICENSE.txt) | Original MinHook/HDE BSD-2-Clause notices |
+| [LICENSE.SAFE_FREEZE](LICENSE.SAFE_FREEZE) | Separately authorized SAFE-FREEZE BSD-2-Clause notice |
+
+These are not three licensing choices for the complete fork. Unchanged
+third-party portions retain their original grants; those grants do not extend
+to the later GPL-only changes. See [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
+No existing third-party copyright or grant is removed or silently reassigned.
+
+The approved logo, color palette and public naming are recorded in
+[Branding](docs/BRANDING.md) and [BRANDING.json](metadata/BRANDING.json).

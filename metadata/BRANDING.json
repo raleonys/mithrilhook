@@ -1,0 +1,24 @@
+{
+  "schema": "mithrilhook.branding.v1",
+  "name": "MithrilHook",
+  "logo": {
+    "path": "resources/branding/mithrilhook.png",
+    "sha256": "043abad9a1e0e6f5854a091612d142959574054e8736053fe76e181eba43df3f",
+    "width": 1536,
+    "height": 1024,
+    "format": "RGBA PNG",
+    "approved_artwork_bytes_preserved": true
+  },
+  "public_header": "MithrilHook.h",
+  "api_prefix": "MTH_",
+  "cmake_package": "MithrilHook",
+  "cmake_target": "MithrilHook::mithrilhook",
+  "binary_stem": "mithrilhook",
+  "distribution_license": "GPL-3.0-only",
+  "license_file": "LICENSE",
+  "retained_third_party_notices": [
+    "LICENSE.txt",
+    "LICENSE.SAFE_FREEZE",
+    "THIRD_PARTY_NOTICES.txt"
+  ]
+}
