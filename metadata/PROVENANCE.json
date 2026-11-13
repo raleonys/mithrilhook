@@ -1,0 +1,23 @@
+{
+  "official_repository": "https://github.com/TsudaKageyu/minhook",
+  "official_commit": "8af6b4acae5a9388fd742b56fa79ece89d96f823",
+  "safe_freeze_repository": "https://github.com/cyanoleon/minhook",
+  "safe_freeze_commit": "311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38",
+  "relocator_repository": "https://github.com/raleonys/citrine-eclipse-mirage",
+  "relocator_pr": 363,
+  "relocator_commit": "19a22e95931bc94c00d25ef5ec08efac976e0023",
+  "relocator_before_branding_sha256": "5d90de54c8a3c04faab6b4368169f4f9fb58c11ecfa45979a7f8808682464080",
+  "strict_mode": "always enabled; legacy best-effort branches removed",
+  "application_dependency": false,
+  "public_api_prefix": "MTH_",
+  "licensing": "Combined distribution and fork additions GPL-3.0-only; upstream BSD-2-Clause and separately authorized SAFE-FREEZE BSD notices retained",
+  "legacy_api_aliases": false,
+  "destination_repository": "https://github.com/raleonys/mithrilhook",
+  "mithrilhook_additions": [
+    "alignment-safe decoder and displacement access",
+    "same-thread recursive entry refusal",
+    "independent MTH API and private helper namespace",
+    "strict-only core",
+    "MithrilHook-only builds and distribution identity"
+  ]
+}

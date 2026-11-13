@@ -1,0 +1,24 @@
+MithrilHook is derived software. Original copyright and license notices remain.
+
+MinHook: Tsuda Kageyu, 2009-2017. BSD-2-Clause terms: LICENSE.txt.
+Original repository: https://github.com/TsudaKageyu/minhook
+Pinned source: 8af6b4acae5a9388fd742b56fa79ece89d96f823.
+The bundled Hacker Disassembler Engine retains Vyacheslav Patkov's source
+notices and the license notices distributed in LICENSE.txt.
+
+SAFE-FREEZE additions: Brownfield contributors, 2026.
+Separately authorized BSD-2-Clause terms: LICENSE.SAFE_FREEZE.
+Source: https://github.com/cyanoleon/minhook
+Pinned source: 311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38.
+The retained authorization/provenance record is docs/SAFE_FREEZE_LICENSE_NOTICE.md.
+
+Relocation hardening and selected regressions imported/adapted from
+raleonys/citrine-eclipse-mirage PR #363, commit
+19a22e95931bc94c00d25ef5ec08efac976e0023.
+These project modifications retain GPL-3.0-only terms. Their source origins and
+changes are recorded in metadata/PROVENANCE.json.
+
+MithrilHook-authored changes and this combined distribution use GPL-3.0-only;
+see LICENSE and resources/licenses/GPL-3.0-only.txt. This does not erase or
+relicense the original BSD material or its notices. No expanded BSD permission
+for the later GPL modifications is presumed from the older SAFE-FREEZE notice.

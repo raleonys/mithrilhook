@@ -1,0 +1,75 @@
+{
+  "schema": "mithrilhook.fixes.v1",
+  "fixes": [
+    {
+      "id": "F01",
+      "change": "Stable owned peer handles, strict preparation, both emergency slots",
+      "origin": "cyanoleon SAFE-FREEZE"
+    },
+    {
+      "id": "F02",
+      "change": "Correct single-disable IP relocation",
+      "origin": "cyanoleon SAFE-FREEZE / Citrine D326-F0006"
+    },
+    {
+      "id": "F03",
+      "change": "Five public mutation cleanup barriers",
+      "origin": "cyanoleon SAFE-FREEZE / Citrine #352"
+    },
+    {
+      "id": "F04",
+      "change": "Per-page patch completion journal and physical state tracking",
+      "origin": "cyanoleon completion / Citrine #362"
+    },
+    {
+      "id": "F05",
+      "change": "Flush generated code before publishing its pointer",
+      "origin": "cyanoleon completion / Citrine #362"
+    },
+    {
+      "id": "F06",
+      "change": "Generated-code retirement IP/register/stack checks",
+      "origin": "cyanoleon retirement / Citrine #362"
+    },
+    {
+      "id": "F07",
+      "change": "Retained buffer/block/heap owners and shutdown-only partial retirement",
+      "origin": "cyanoleon retirement / Citrine #362"
+    },
+    {
+      "id": "F08",
+      "change": "Signed RIP displacement checks and EIP wrapping",
+      "origin": "Citrine #363"
+    },
+    {
+      "id": "F09",
+      "change": "VEX/relative instruction classification and XBEGIN refusal",
+      "origin": "Citrine #363"
+    },
+    {
+      "id": "F10",
+      "change": "Bounded instruction and padding reads",
+      "origin": "Citrine #363"
+    },
+    {
+      "id": "F11",
+      "change": "Alignment-safe multi-byte decoder reads and displacement writes",
+      "origin": "MithrilHook"
+    },
+    {
+      "id": "F12",
+      "change": "Same-thread API reentry refusal",
+      "origin": "MithrilHook"
+    },
+    {
+      "id": "F13",
+      "change": "Reject guarded/nonaccessible executable target and detour regions",
+      "origin": "MithrilHook"
+    }
+  ],
+  "excluded_unreviewed_proposals": {
+    "TsudaKageyu/minhook#151": "Loader-lock/fixed-PEB-offset proposal not imported; thread-birth boundary remains open",
+    "TsudaKageyu/minhook#175": "No demonstrated truncation: four-bit nIP holds the bounded maximum of eight entries",
+    "TsudaKageyu/minhook#176": "Additional process-handle/error ownership needs review; not imported"
+  }
+}

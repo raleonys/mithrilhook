@@ -1,141 +1,72 @@
-#  MinHook - The Minimalistic API Hooking Library for x64/x86
-#  Copyright (C) 2009-2017 Tsuda Kageyu.
-#  All rights reserved.
-#
-#  Redistribution and use in source and binary forms, with or without
-#  modification, are permitted provided that the following conditions
-#  are met:
-#
-#   1. Redistributions of source code must retain the above copyright
-#      notice, this list of conditions and the following disclaimer.
-#   2. Redistributions in binary form must reproduce the above copyright
-#      notice, this list of conditions and the following disclaimer in the
-#      documentation and/or other materials provided with the distribution.
-#
-#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-#  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER
-#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-cmake_minimum_required(VERSION 3.0...3.5)
-
-project(minhook LANGUAGES C)
-
+cmake_minimum_required(VERSION 3.20)
+cmake_policy(SET CMP0091 NEW)
+project(MithrilHook VERSION 0.1.0 LANGUAGES C)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+include(CTest)
+include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
-set(MINHOOK_MAJOR_VERSION 1)
-set(MINHOOK_MINOR_VERSION 3)
-set(MINHOOK_PATCH_VERSION 3)
-set(MINHOOK_VERSION ${MINHOOK_MAJOR_VERSION}.${MINHOOK_MINOR_VERSION}.${MINHOOK_PATCH_VERSION})
-
-################
-#    BUILD     # 
-################
-
-option(BUILD_SHARED_LIBS "build shared version" OFF)
-
-set(SOURCES_MINHOOK 
-  "src/buffer.c"
-  "src/hook.c"
-  "src/trampoline.c"
-)
-
+option(BUILD_SHARED_LIBS "Build the MithrilHook shared library" OFF)
+option(MITHRILHOOK_SANITIZERS "Enable sanitizers for portable relocation contracts" OFF)
+set(MTH_CORE src/buffer.c src/trampoline.c)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(SOURCES_HDE "src/hde/hde64.c")
+  set(MTH_HDE src/hde/hde64.c)
 else()
-  set(SOURCES_HDE "src/hde/hde32.c")
+  set(MTH_HDE src/hde/hde32.c)
 endif()
-
-if(BUILD_SHARED_LIBS)
-  set(RESOURCES 
-    "dll_resources/MinHook.rc"
-    "dll_resources/MinHook.def"
-  )
-endif()
-
-add_library(minhook ${SOURCES_MINHOOK} ${SOURCES_HDE} ${RESOURCES})
-
-target_include_directories(minhook PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
-  $<INSTALL_INTERFACE:include>
-)
-
-target_include_directories(minhook PRIVATE "src/")
-target_include_directories(minhook PRIVATE "src/hde/")
-
 if(WIN32)
-  set_target_properties(minhook PROPERTIES PREFIX "")
-  if(CMAKE_SIZEOF_VOID_P EQUAL 8)   
-    set_target_properties(minhook PROPERTIES DEBUG_POSTFIX ".x64d")
-    set_target_properties(minhook PROPERTIES RELEASE_POSTFIX ".x64")
-    set_target_properties(minhook PROPERTIES RELWITHDEBINFO_POSTFIX ".x64")
-    set_target_properties(minhook PROPERTIES MINSIZEREL_POSTFIX ".x64")
-  else()
-    set_target_properties(minhook PROPERTIES DEBUG_POSTFIX ".x32d")
-    set_target_properties(minhook PROPERTIES RELEASE_POSTFIX ".x32")
-    set_target_properties(minhook PROPERTIES RELWITHDEBINFO_POSTFIX ".x32")
-    set_target_properties(minhook PROPERTIES MINSIZEREL_POSTFIX ".x32")
+  if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|x86|X86|i.86)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "ARM")
+    message(FATAL_ERROR "MithrilHook currently supports Windows x86 and x64")
   endif()
+  if(MSVC AND NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  endif()
+  set(MTH_RESOURCES)
+  if(BUILD_SHARED_LIBS)
+    enable_language(RC)
+    configure_file(dll_resources/MithrilHook.rc.in ${CMAKE_CURRENT_BINARY_DIR}/MithrilHook.rc @ONLY)
+    list(APPEND MTH_RESOURCES dll_resources/MithrilHook.def ${CMAKE_CURRENT_BINARY_DIR}/MithrilHook.rc)
+  endif()
+  add_library(mithrilhook src/hook.c ${MTH_CORE} ${MTH_HDE} ${MTH_RESOURCES})
+  add_library(MithrilHook::mithrilhook ALIAS mithrilhook)
+  target_compile_features(mithrilhook PRIVATE c_std_17)
+  target_include_directories(mithrilhook PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+  target_compile_definitions(mithrilhook PRIVATE _WIN32_WINNT=0x0601)
+  set_target_properties(mithrilhook PROPERTIES PREFIX "" OUTPUT_NAME mithrilhook DEBUG_POSTFIX "d")
+  if(MSVC)
+    target_compile_options(mithrilhook PRIVATE /W4 /sdl)
+  endif()
+  install(TARGETS mithrilhook EXPORT MithrilHookTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(EXPORT MithrilHookTargets NAMESPACE MithrilHook:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MithrilHook)
+  configure_package_config_file(cmake/MithrilHookConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/MithrilHookConfig.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MithrilHook)
+  write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/MithrilHookConfigVersion.cmake VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/MithrilHookConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/MithrilHookConfigVersion.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MithrilHook)
+  install(FILES LICENSE LICENSE.txt LICENSE.SAFE_FREEZE THIRD_PARTY_NOTICES.txt DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/licenses)
+  if(BUILD_TESTING)
+    enable_language(CXX)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_subdirectory(tests)
+  endif()
+elseif(BUILD_TESTING)
+  add_executable(mithrilhook_portable_relocator tests/relocator.c tests/portable/windows_stub.c src/trampoline.c ${MTH_HDE})
+  target_include_directories(mithrilhook_portable_relocator PRIVATE tests/portable src)
+  target_compile_features(mithrilhook_portable_relocator PRIVATE c_std_17)
+  target_compile_options(mithrilhook_portable_relocator PRIVATE -Wall -Wextra -Werror)
+  if(MITHRILHOOK_SANITIZERS)
+    target_compile_options(mithrilhook_portable_relocator PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(mithrilhook_portable_relocator PRIVATE -fsanitize=address,undefined)
+  endif()
+  add_executable(mithrilhook_portable_decoder tests/decoder.c ${MTH_HDE})
+  target_include_directories(mithrilhook_portable_decoder PRIVATE tests/portable src)
+  target_compile_options(mithrilhook_portable_decoder PRIVATE -Wall -Wextra -Werror)
+  if(MITHRILHOOK_SANITIZERS)
+    target_compile_options(mithrilhook_portable_decoder PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(mithrilhook_portable_decoder PRIVATE -fsanitize=address,undefined)
+  endif()
+  add_test(NAME portable_decoder_contracts COMMAND mithrilhook_portable_decoder)
+  add_test(NAME portable_relocator_contracts COMMAND mithrilhook_portable_relocator)
 else()
-  set_target_properties(minhook PROPERTIES PREFIX "lib")
-  set_target_properties(minhook PROPERTIES POSTFIX "")
-  set_target_properties(minhook PROPERTIES DEBUG_POSTFIX "d")
+  message(FATAL_ERROR "The engine requires Windows; Linux supports portable relocation tests only")
 endif()
-
-################
-# CMAKE CONFIG # 
-################
-
-configure_package_config_file(
-    "cmake/minhook-config.cmake.in"
-    "minhook-config.cmake"
-  INSTALL_DESTINATION 
-    "share/minhook"
-)
-
-write_basic_package_version_file(
-  "minhook-config-version.cmake"
-VERSION 
-  ${MINHOOK_VERSION}
-COMPATIBILITY
-  AnyNewerVersion
-)
-
-install(
-  FILES 
-    "${CMAKE_CURRENT_BINARY_DIR}/minhook-config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/minhook-config-version.cmake"
-  DESTINATION 
-    "share/minhook"
-)
-
-###################
-#     INSTALL     #
-###################
-
-install(TARGETS minhook
-        EXPORT minhook-targets
-        RUNTIME DESTINATION "bin"
-        ARCHIVE DESTINATION "lib"
-        LIBRARY DESTINATION "lib"
-)
-
-install(
-  EXPORT
-    minhook-targets
-  NAMESPACE 
-    minhook::
-  DESTINATION 
-    "share/minhook"
-)
-
-install(
-  DIRECTORY include DESTINATION .
-)

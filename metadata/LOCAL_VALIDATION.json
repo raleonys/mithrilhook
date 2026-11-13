@@ -1,0 +1,34 @@
+{
+  "schema": "mithrilhook.local-validation.v1",
+  "production_source_sha256": {
+    "src/hook.c": "efd07ed6fb267878926e7a6efea1a558ba0ea769740d5aa24c0f5135e05ecdf9",
+    "src/buffer.c": "e7141125dae70f33a93c661045921d5bbf7f23cc66ece7aad3da9c519c68090e",
+    "src/buffer.h": "7037c6e9e180ea823f037e03b12c80ffe8ce506387f2d00ad3b755faa043fbb4",
+    "src/trampoline.c": "b72882a169203a81ce0b8688ef76520b3316828098531dda0bf9c4952f6a1297",
+    "src/hde/hde32.c": "01a0f6cefdfe466227101b1006d7252c41e9b887ed58c40cdfb3aa6434b49ea9",
+    "src/hde/hde64.c": "4b01b7e14dd4277753123accc4ec9fa5be30dc6278c8ad67b2ef2f6b808617b7",
+    "include/MithrilHook.h": "e075803e1c2d6f34e9050703e705f923236b0ec79d1009182407e90c4b3105a7"
+  },
+  "source_integrity": "PASS",
+  "portable_debug_asan_ubsan": {
+    "status": "PASS",
+    "ctest_passed": 2,
+    "decoder_checks": 112,
+    "relocator_checks": 11
+  },
+  "portable_release": {
+    "status": "PASS",
+    "ctest_passed": 2
+  },
+  "windows_cross_build": {
+    "compiler": "Zig 0.14.1 / Clang 19.1.7",
+    "x64_static_and_test_binaries": "PASS",
+    "x86_static_and_test_binaries": "PASS",
+    "x64_shared_and_exact_exports_and_resource": "PASS",
+    "x86_shared_and_exact_exports_and_resource": "PASS",
+    "windows_binaries_executed": false
+  },
+  "native_windows_final_source": "PENDING",
+  "consumer_game_acceptance": "PENDING",
+  "remote_publication": "PENDING_WRITE_ACCESS"
+}

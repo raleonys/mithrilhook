@@ -1,0 +1,53 @@
+name: MithrilHook validation
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portable:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/verify_sources.py
+      - run: cmake -S . -B build/portable -DCMAKE_BUILD_TYPE=Debug -DMITHRILHOOK_SANITIZERS=ON
+      - run: cmake --build build/portable --parallel 2
+      - run: ctest --test-dir build/portable --output-on-failure --output-junit portable.xml
+        env:
+          UBSAN_OPTIONS: halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1
+  native:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: x64, config: Debug, shared: 'OFF', toolset: v143}
+          - {arch: x64, config: Release, shared: 'OFF', toolset: v143}
+          - {arch: Win32, config: Debug, shared: 'OFF', toolset: v143}
+          - {arch: Win32, config: Release, shared: 'OFF', toolset: v143}
+          - {arch: x64, config: Release, shared: 'ON', toolset: v143}
+          - {arch: Win32, config: Release, shared: 'ON', toolset: v143}
+          - {arch: x64, config: Release, shared: 'OFF', toolset: ClangCL}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/verify_sources.py
+      - run: cmake -S . -B build/native -A ${{ matrix.arch }} -T ${{ matrix.toolset }} -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DBUILD_TESTING=ON
+      - run: cmake --build build/native --config ${{ matrix.config }} --parallel 2
+      - run: ctest --test-dir build/native -C ${{ matrix.config }} --output-on-failure --output-junit native.xml
+      - run: cmake --install build/native --config ${{ matrix.config }} --prefix dist/install
+      - if: matrix.shared == 'ON'
+        run: python scripts/verify_dll.py build/native/Release/mithrilhook.dll
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MithrilHook-${{ matrix.arch }}-${{ matrix.config }}-${{ matrix.toolset }}-shared-${{ matrix.shared }}
+          path: |
+            build/native/native.xml
+            build/native/Testing/Temporary/LastTest.log
+            dist/install

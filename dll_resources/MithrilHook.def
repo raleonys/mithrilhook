@@ -1,0 +1,14 @@
+EXPORTS
+    MTH_Initialize
+    MTH_IsOperationInProgressOnThisThread
+    MTH_Uninitialize
+    MTH_CreateHook
+    MTH_CreateHookApi
+    MTH_CreateHookApiEx
+    MTH_RemoveHook
+    MTH_EnableHook
+    MTH_DisableHook
+    MTH_QueueEnableHook
+    MTH_QueueDisableHook
+    MTH_ApplyQueued
+    MTH_StatusToString
