@@ -267,6 +267,14 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 
     UINT8     oldPos   = 0;
     UINT8     newPos   = 0;
+    struct
+    {
+        UINT8 oldTarget;
+        UINT8 newEnd;
+        UINT8 displacement;
+        UINT8 width;
+    } internalBranches[ARRAYSIZE(ct->oldIPs)];
+    UINT internalCount = 0;
     ULONG_PTR jmpDest  = 0;     // Destination address of an internal jump.
     BOOL      finished = FALSE; // Is the function completed?
     UINT8     instBuf[16];
@@ -281,6 +289,8 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         HDE       hs;
         UINT      copySize;
         LPVOID    pCopySrc;
+        BOOL      internalBranch = FALSE;
+        UINT8     internalTarget = 0;
         ULONG_PTR pOldInst = (ULONG_PTR)ct->pTarget     + oldPos;
         ULONG_PTR pNewInst = (ULONG_PTR)ct->pTrampoline + newPos;
 
@@ -396,6 +406,8 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
             if ((ULONG_PTR)ct->pTarget <= dest
                 && dest < ((ULONG_PTR)ct->pTarget + sizeof(JMP_REL)))
             {
+                internalBranch = TRUE;
+                internalTarget = (UINT8)(dest - (ULONG_PTR)ct->pTarget);
                 if (jmpDest < dest)
                     jmpDest = dest;
             }
@@ -430,6 +442,8 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
             if ((ULONG_PTR)ct->pTarget <= dest
                 && dest < ((ULONG_PTR)ct->pTarget + sizeof(JMP_REL)))
             {
+                internalBranch = TRUE;
+                internalTarget = (UINT8)(dest - (ULONG_PTR)ct->pTarget);
                 if (jmpDest < dest)
                     jmpDest = dest;
             }
@@ -479,6 +493,20 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         if (ct->nIP >= ARRAYSIZE(ct->oldIPs))
             return FALSE;
 
+        if (internalBranch)
+        {
+            UINT8 width = (hs.flags & F_IMM8) ? 1 : 4;
+            /* Resolve only after every copied instruction boundary is known.
+             * A prior expansion can invalidate an unchanged backward offset. */
+            if (internalCount >= ARRAYSIZE(internalBranches) || copySize != hs.len || hs.len < width)
+                return FALSE;
+            internalBranches[internalCount].oldTarget = internalTarget;
+            internalBranches[internalCount].newEnd = (UINT8)(newPos + hs.len);
+            internalBranches[internalCount].displacement = (UINT8)(newPos + hs.len - width);
+            internalBranches[internalCount].width = width;
+            ++internalCount;
+        }
+
         ct->oldIPs[ct->nIP] = oldPos;
         ct->newIPs[ct->nIP] = newPos;
         ct->nIP++;
@@ -493,6 +521,35 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         newPos += copySize;
         oldPos += hs.len;
     } while (!finished);
+
+    {
+        UINT branch;
+        for (branch = 0; branch < internalCount; ++branch)
+        {
+            UINT target;
+            INT32 delta;
+            for (target = 0; target < ct->nIP; ++target)
+                if (ct->oldIPs[target] == internalBranches[branch].oldTarget)
+                    break;
+            /* An entry into the middle of another decoded instruction has
+             * no supported mapping, even when its original offset fits. */
+            if (target == ct->nIP)
+                return FALSE;
+            delta = (INT32)ct->newIPs[target] - internalBranches[branch].newEnd;
+            if (internalBranches[branch].width == 1)
+            {
+                INT8 shortDelta;
+                if (delta < -128 || delta > 127)
+                    return FALSE;
+                shortDelta = (INT8)delta;
+                memcpy((LPBYTE)ct->pTrampoline + internalBranches[branch].displacement,
+                    &shortDelta, sizeof(shortDelta));
+            }
+            else
+                memcpy((LPBYTE)ct->pTrampoline + internalBranches[branch].displacement,
+                    &delta, sizeof(delta));
+        }
+    }
 
     // Is there enough place for a long jump?
     if (oldPos < sizeof(JMP_REL)

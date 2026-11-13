@@ -5,6 +5,13 @@ There is no published release or release tag. The CMake project version is
 
 ## Unreleased
 
+- Resolve internal JMP/Jcc/LOOP destinations through the completed instruction
+  map so backward branches remain correct after an earlier Jcc expansion.
+- Refuse internal targets without a decoded instruction-boundary mapping;
+  retain plain-loop controls and conservative forward-span growth refusals.
+- Add complete native source/trampoline/detour/restore/retirement execution
+  cases and a portable prefix/opcode/target-layout matrix for review #13.
+
 - Refuse copied CALL-next/get-PC idioms and unsupported x64 REX2/APX forms
   before publication; explicitly document return-address-observation limits.
 - Keep ordinary CALL and legacy/REX byte-alias controls; add nonexecuting APX
