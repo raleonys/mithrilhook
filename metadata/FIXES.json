@@ -145,6 +145,11 @@
       "id": "F29",
       "change": "Refuse copied x87 operations before FIP can escape through a state save, including beyond the prefix; retain fixed FXSAVE/FXRSTOR without copied producers and refuse extended state layouts",
       "origin": "MithrilHook review #19; inherited x87 instruction-pointer observation mismatch"
+    },
+    {
+      "id": "F30",
+      "change": "Refuse copied SYSCALL and unsupported transition/interrupt/far-return classes before publication; preserve source-resident syscall bodies after an ordinary prefix",
+      "origin": "MithrilHook review #20; inherited copying of SYSCALL changes its architectural next RIP exposed in RCX"
     }
   ],
   "excluded_unreviewed_proposals": {

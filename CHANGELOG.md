@@ -3,7 +3,7 @@
 VERSION is the canonical distribution version. This history groups changes
 by their resulting behavior and links the implementing pull requests.
 
-## [1.0.1]
+## [1.0.2]
 
 ### Added
 
@@ -21,7 +21,7 @@ by their resulting behavior and links the implementing pull requests.
   negative controls, binary receipts and recomputed statistics are retained.
 - Independent installed-package consumers across static/shared, Debug/Release,
   MSVC/clang-cl and x64/Win32 builds, with actual hook/original/retirement calls.
-- A canonical VERSION file and consistent 1.0.1 CMake/package/DLL metadata,
+- A canonical VERSION file and consistent 1.0.2 CMake/package/DLL metadata,
   release resource flags and versioned validation artifacts.
 
 ### Fixed
@@ -59,11 +59,16 @@ by their resulting behavior and links the implementing pull requests.
   FXSAVE/FXRSTOR without copied x87 producers and bodies outside the copied
   prefix. Refuse unproven extended-state layouts before publication. ([#19])
 
+- Refuse copied SYSCALL before original publication: its architectural next
+  RIP in RCX would otherwise identify the trampoline. Explicitly refuse copied
+  transition/interrupt/far-return classes; preserve supported near CALL/RET
+  and source-resident syscall bodies after the copied prefix. ([#20])
+
 ### Packaging and compatibility
 
-- The installed package exposes version 1.0.1 without a prerelease suffix.
-  Numeric requests, including exact 1.0.1, work without prerelease opt-in.
-  CMake and Windows fixed metadata use 1.0.1; DLL prerelease flags are clear.
+- The installed package exposes version 1.0.2 without a prerelease suffix.
+  Numeric requests, including exact 1.0.2, work without prerelease opt-in.
+  CMake and Windows fixed metadata use 1.0.2; DLL prerelease flags are clear.
   Static/shared consumers retain their matching MSVC runtime configuration.
 - Distribution remains GPL-3.0-only. Original MinHook/HDE BSD notices and the
   separately authorized SAFE-FREEZE notice remain intact; these are not three
@@ -77,15 +82,16 @@ by their resulting behavior and links the implementing pull requests.
 
 Exact revisions, configurations and completed runs are recorded in
 [Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
-current PR [#19]. Earlier results keep their original source identities.
+current PR [#20]. Earlier results keep their original source identities.
 Library publication is owner-controlled after the selected source's correctness,
 package, performance and source/license review. Citrine integration and actual
 application/game lifecycle acceptance are the following engineering phase.
 
 ## Development history before the first release
 
-The earlier 0.1.0 and 1.0.0-rc.1 identifiers represented development work,
-not prior stable releases. The initial independent core, branding, thread/batch
+The earlier 0.1.0, 1.0.0-rc.1 and prepared 1.0.1 identifiers represented
+development work; no 1.0.1 tag/release was published. They are not listed as
+prior stable releases. The initial independent core, branding, thread/batch
 review, generated unwind support and evidence audit were developed in PRs
 [#1], [#2], [#3], [#4] and [#5]. Benchmark/package infrastructure was merged in
 [#6]; subsequent reviewed corrections are grouped above by resulting behavior.
@@ -105,3 +111,4 @@ Report-only review PRs are not counted as additional software releases.
 [#17]: https://github.com/raleonys/mithrilhook/pull/17
 [#18]: https://github.com/raleonys/mithrilhook/pull/18
 [#19]: https://github.com/raleonys/mithrilhook/pull/19
+[#20]: https://github.com/raleonys/mithrilhook/pull/20

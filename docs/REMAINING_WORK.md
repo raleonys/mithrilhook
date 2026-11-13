@@ -1,11 +1,11 @@
 # Release and integration status
 
-The selected distribution version is 1.0.1, without an RC suffix. Confirmed
-reports through PR #18 have merged runtime corrections. PR #19 addresses the
-subsequent x87 FIP observation failure and updates all current version/package
-and changelog metadata. Publication awaits review of that correction and its
-fresh exact-source correctness/package evidence. Previous benchmark/package
-records remain pinned to their original bytes.
+The source version is 1.0.2, without an RC suffix. It contains the reviewed
+corrections through PR #19 plus PR #20's explicit transition-instruction policy.
+The owner selected 1.0.2 for stable tag/release publication after validation.
+The release process pins its source, package and evidence identities; it does
+not transfer results from earlier 1.0.1 or RC bytes. Next comes Citrine
+integration and actual application lifecycle acceptance.
 
 ## Library release gates
 

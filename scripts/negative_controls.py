@@ -33,8 +33,17 @@ CALL_GUARD='''            if (dest >= (ULONG_PTR)ct->pTarget &&
 X87_GUARD='''            if (hs.opcode >= 0xD8 && hs.opcode <= 0xDF)
                 return FALSE;
 '''
+TRANSITION_GUARD='''            if ((hs.opcode == 0x0F && (hs.opcode2 == 0x05 || hs.opcode2 == 0x07 ||
+                    hs.opcode2 == 0x34 || hs.opcode2 == 0x35 || hs.opcode2 == 0xAA)) ||
+                hs.opcode == 0xCC || hs.opcode == 0xCD || hs.opcode == 0xCE ||
+                hs.opcode == 0xCF || hs.opcode == 0xF1 || hs.opcode == 0xCA ||
+                hs.opcode == 0xCB || hs.opcode == 0x9A || hs.opcode == 0xEA ||
+                (hs.opcode == 0xFF && (hs.modrm_reg == 3 || hs.modrm_reg == 5)))
+                return FALSE;
+'''
 TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before original publication',
- 'x87':'FAIL: x87 producer refuses before original publication'}
+ 'x87':'FAIL: x87 producer refuses before original publication',
+ 'transition':'FAIL: transition instruction refuses before original publication'}
 def prepare(output):
  output=Path(output).resolve()
  if not output.is_relative_to((ROOT/'build').resolve()):
@@ -66,6 +75,8 @@ def prepare(output):
  (output/'internal-call.c').write_text(trampoline.replace(CALL_GUARD,'',1))
  if trampoline.count(X87_GUARD)!=1:raise ValueError('Missing unique x87 relocation refusal')
  (output/'x87.c').write_text(trampoline.replace(X87_GUARD,'',1))
+ if trampoline.count(TRANSITION_GUARD)!=1:raise ValueError('Missing unique transition relocation refusal')
+ (output/'transition.c').write_text(trampoline.replace(TRANSITION_GUARD,'',1))
 def run(mode,command):
  result=subprocess.run(command,capture_output=True,text=True,timeout=35)
  print(result.stdout,end='');print(result.stderr,end='',file=sys.stderr)

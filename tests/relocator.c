@@ -223,6 +223,46 @@ static void x87_state_cases(BYTE *source,BYTE *trampoline)
     }
 }
 
+static void transition_cases(BYTE *source,BYTE *trampoline)
+{
+    const struct {BYTE bytes[8];UINT size;} gates[]={
+        {{0x0f,0x05},2},{{0x0f,0x07},2},{{0x0f,0x34},2},{{0x0f,0x35},2},{{0x0f,0xaa},2},
+        {{0xcc},1},{{0xcd,0x2e},2},{{0xce},1},{{0xcf},1},{{0xf1},1},
+        {{0xcb},1},{{0xca,0,0},3},{{0x9a,0,0,0,0,0,0},7},{{0xea,0,0,0,0,0,0},7},
+        {{0xff,0x19},2},{{0xff,0x29},2}
+    };
+    const BYTE prefixes[]={0,0x66,0x67,0x2e,0xf2,0xf3};
+    UINT kind,prefix,site;
+    for(kind=0;kind<sizeof(gates)/sizeof(gates[0]);++kind)
+    for(prefix=0;prefix<22;++prefix)
+    for(site=0;site<5;++site)
+    {
+        UINT size=prefix?1:0;TRAMPOLINE ct;BYTE snapshot[64];
+        memset(source,0x90,64);
+        if(size)source[site]=prefix<6?prefixes[prefix]:(BYTE)(0x40+prefix-6);
+        memcpy(source+site+size,gates[kind].bytes,gates[kind].size);
+        source[site+size+gates[kind].size]=0xc3;memcpy(snapshot,source,sizeof(snapshot));
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(!MthInternal_CreateTrampolineFunction(&ct),"copied system transitions refuse before original publication");
+        check(!memcmp(source,snapshot,sizeof(snapshot)),"transition refusal preserves source bytes");
+    }
+    for(site=5;site<10;++site)
+    {
+        TRAMPOLINE ct;memset(source,0x90,64);source[site]=0x0f;source[site+1]=5;source[site+2]=0xc3;
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct),"a source-resident SYSCALL after the copied prefix keeps its original IP");
+    }
+    {
+        const struct {BYTE bytes[4];UINT size;} controls[]={{{0xc3},1},{{0xc2,4,0},3},{{0x0f,0x1f,0},3},{{0x90,0x90,0x90,0x90},4}};
+        for(kind=0;kind<sizeof(controls)/sizeof(controls[0]);++kind)
+        {
+            TRAMPOLINE ct;memset(source,0x90,64);memcpy(source,controls[kind].bytes,controls[kind].size);source[8]=0xc3;
+            memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+            check(MthInternal_CreateTrampolineFunction(&ct),"ordinary near returns and neutral instructions retain their existing contract");
+        }
+    }
+}
+
 static void rip_patch_cases(BYTE *source, BYTE *trampoline)
 {
     static const struct { BYTE bytes[16]; UINT length; BOOL accepted; } cases[] = {
@@ -364,6 +404,7 @@ int main(void)
     internal_branch_cases(code + 64, code + 512);
     internal_call_cases(code + 1024, code + 512);
     x87_state_cases(code + 1024, code + 512);
+    transition_cases(code + 1024, code + 512);
     rip_patch_cases(code + 1024, code + 512);
     push_prefix_cases(code + 1024, code + 512);
     {
