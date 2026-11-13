@@ -21,7 +21,7 @@
     "benchmarks/adapter.h": "83a67f0d2e42e5acbe91043e68aa41a83f3715f9fb648eac6e5f59e25656a4f0",
     "benchmarks/driver.cpp": "1ff4d92e837c1f6c626d19b726351827e416e981729bd08a4bf787f3d6b3e1ad",
     "benchmarks/nt_headers.h": "c4e7e9e0637797defc7307c8162d6879108a1eec1329284163617269bb4c21af",
-    "benchmarks/prepare.py": "bb4159c1a44aa51025d5871bb0bc66a594dfdae2086d34e34d83ffabf9e49376",
+    "benchmarks/prepare.py": "56d6a6963ab9065b1d288c126ad470aaa840292c544a79dabc33a71b6c566375",
     "benchmarks/receipt.py": "d04e0ff2c74d3bd5c86060cc7b9635b264de14a566c38fb64dcc3ee162995377",
     "benchmarks/run.py": "f537760b83f6a8c0c391cf8ed7b7a2e0cc95e947d7bbedf55150b65eae2875bf",
     "cmake/MithrilHookConfig.cmake.in": "b45da5103edd78dd664bbe60eb874688b537491cfd031df957169552f4cc4c6b",

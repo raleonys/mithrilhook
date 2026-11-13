@@ -12,7 +12,7 @@ def prepare():
  for name,item in lock['repositories'].items():
   dest=sources/name
   if not (dest/'.git').exists():
-   run('git','init',str(dest));run('git','-C',str(dest),'fetch','--depth=1','https://github.com/'+item['repository']+'.git',item['commit'])
+   run('git','init',str(dest));run('git','-C',str(dest),'config','core.autocrlf','false');run('git','-C',str(dest),'config','core.eol','lf');run('git','-C',str(dest),'fetch','--depth=1','https://github.com/'+item['repository']+'.git',item['commit'])
    run('git','-C',str(dest),'checkout','--detach','FETCH_HEAD')
   if run('git','-C',str(dest),'rev-parse','HEAD')!=item['commit'] or run('git','-C',str(dest),'status','--porcelain'):
    raise ValueError('Benchmark input is wrong or dirty: '+name)
