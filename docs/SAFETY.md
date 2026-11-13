@@ -23,6 +23,9 @@ an unrecoverable failure.
 - Disable, stop admitting new original calls, drain callback users, and only
   then remove/uninitialize. Conservative peer-range checks complement this
   protocol; they do not replace callback/module lifetime management.
+  Keep that admission closed across the retirement scan, peer resumption and
+  subsequent runtime-table/storage release. Runtime registry operations run
+  outside owned suspension windows to avoid freezing a registry-lock holder.
 - Never call a trampoline after the hook/engine successfully retires it.
 
 ## Remaining engineering boundaries
@@ -40,14 +43,13 @@ an unrecoverable failure.
    foreign patching. The consumer must control those lifetimes.
 4. The decoder and relocated instruction forms are finite. The #363 changes
    improve specific RIP/EIP/VEX/relative cases, not all future ISA encodings.
-5. Generated x64 code has no synthesized runtime-function/unwind table. Creation
-   therefore refuses registered nonleaf interior entries, unwind operations
-   within the relocated prefix, handler/chained metadata and unrecognized
-   metadata formats with MTH_ERROR_UNSUPPORTED_FUNCTION. A registered function
-   with a supported neutral prefix can remain leaf-unwindable until jumping
-   back to its original code. Unregistered source code must already satisfy
-   the Windows leaf-unwind contract; invalid custom metadata is not repaired.
-   This is conservative refusal, not general x64 exception-handler support.
+5. Supported version-1 x64 prefixes receive owned generated unwind metadata.
+   The synthetic prologue covers the jump-back to avoid false tail-epilogue
+   interpretation. Handler-bearing bodies outside the original prologue,
+   chained/unknown source formats, nonleaf interior entries and undescribed
+   body stack/frame changes remain unsupported. Unregistered source code must
+   already satisfy the Windows leaf-unwind contract; invalid custom metadata
+   is not repaired. See UNWIND.md for the exact subset and lifecycle.
 6. Stack/register scans can find stale pointer values and conservatively defer
    cleanup. The scan budget is bounded; incomplete reads reject retirement.
 7. Actual arbitrary host/game unload acceptance remains independent of controlled

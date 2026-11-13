@@ -22,9 +22,12 @@ MinHook-Detours, this API does not keep updating that output variable during
 activation/deactivation.
 
 On x64, registered source functions are checked against their runtime-function
-metadata. Unsupported unwind-sensitive prefixes, handlers/chains and interior
-entries return MTH_ERROR_UNSUPPORTED_FUNCTION without publishing the original
-pointer. See SAFETY.md for the supported neutral-prefix and leaf contract.
+metadata. Supported prefixes receive fixed-address generated runtime entries
+before publication on Windows 10 and later. Older or unknown systems retain
+strict refusal when nonleaf metadata is needed. Unknown/chained source formats, untranslated handler-bearing
+bodies, interior nonleaf entries and undescribed stack/frame changes return
+MTH_ERROR_UNSUPPORTED_FUNCTION. Registration failures return
+MTH_ERROR_MEMORY_PROTECT without publishing an original. See UNWIND.md.
 
 MTH_ALL_HOOKS selects the owned set for the documented enable/disable/queue
 operations. Removal remains target-specific; uninitialize retires the complete
@@ -42,6 +45,11 @@ After failed preparation or a partial batch, peer IPs are reconciled to physical
 hook state before resumption. A failed context repair remains an owned retryable
 operation. Queued changes for unwritten targets remain pending; a caller can
 retry apply or explicitly change that intent after pending cleanup completes.
+
+Unwind-table deletion failure retains both the table and executable storage.
+If memory release fails after deletion, registration is restored; a failed
+restoration remains an owned recovery obligation and blocks new mutations.
+Keep original-call admission closed during failed retirement and recovery.
 
 MTH_IsOperationInProgressOnThisThread is an observation, not a cross-thread
 reservation or a safe-unload verdict. Error formatting and this observation do

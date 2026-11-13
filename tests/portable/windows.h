@@ -15,6 +15,7 @@ typedef int32_t INT32;
 typedef int64_t INT64;
 typedef uint32_t DWORD, UINT32, *PUINT32;
 typedef uint64_t UINT64;
+typedef struct { DWORD BeginAddress,EndAddress,UnwindData; } RUNTIME_FUNCTION;
 typedef unsigned int UINT;
 typedef uintptr_t ULONG_PTR;
 typedef size_t SIZE_T;

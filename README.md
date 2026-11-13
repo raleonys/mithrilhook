@@ -31,8 +31,10 @@ unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 - Alignment-safe decoder/displacement access and same-thread reentry refusal.
 - Post-suspension peer coverage checks and retryable IP reconciliation against
   actual writes after failed preparation or partial batches.
-- Conservative x64 refusal when the relocated prefix needs unsupported unwind
-  operations or exception-handler metadata. See [Security audit](docs/SECURITY_AUDIT.md).
+- Owned x64 runtime-function metadata for supported version-1 prologues and
+  stack/frame-neutral body prefixes, with retryable registry/storage retirement.
+  Unknown formats and untranslated handler-bearing bodies remain refused.
+  See [Unwind support](docs/UNWIND.md) and [Security audit](docs/SECURITY_AUDIT.md).
 
 Strict behavior is compiled directly into the core. There is no best-effort
 mode or opt-out from the ownership checks. No application repository, source

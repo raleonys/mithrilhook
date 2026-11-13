@@ -80,6 +80,21 @@
       "id": "F16",
       "change": "Refuse unsupported registered x64 unwind-sensitive relocation before publishing a hook",
       "origin": "MithrilHook thread/batch/unwind audit; conservative compatibility boundary"
+    },
+    {
+      "id": "F17",
+      "change": "Owned bounded version-2 x64 prefix unwind metadata with a synthetic prologue covering the complete jump-back",
+      "origin": "MithrilHook x64 compatibility follow-up"
+    },
+    {
+      "id": "F18",
+      "change": "Retryable runtime-table registration/deletion and memory-release rollback ownership",
+      "origin": "MithrilHook x64 compatibility follow-up"
+    },
+    {
+      "id": "F19",
+      "change": "Runtime-table registry operations outside owned peer-suspension windows under consumer quiescence",
+      "origin": "MithrilHook x64 compatibility follow-up"
     }
   ],
   "excluded_unreviewed_proposals": {

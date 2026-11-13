@@ -45,8 +45,8 @@ describe their earlier verification stage.
 
 The thread/batch/unwind audit is described in SECURITY_AUDIT.md. The workflow
 covers MSVC x64/Win32 Debug/Release static, x64/Win32 Release shared and clang-cl
-x64 Release, plus Linux portable ASan/UBSan checks. There are 21 native tests on
-x64 and 18 on Win32: 138 executions across the seven cells. X64-only relocation
+x64 Release, plus Linux portable ASan/UBSan checks. There are 23 native tests on
+x64 and 18 on Win32: 146 executions across the seven cells. X64-only relocation
 and runtime-function/unwind fixtures are not claimed as Win32 execution. Nine
 precise negative controls apply to x64, eight to Win32. The bounded genuine
 thread-churn fixture uses 50 transactions per run.
@@ -56,6 +56,10 @@ bytes. Use the exact candidate head's checks at
 https://github.com/raleonys/mithrilhook/actions/workflows/validation.yml.
 Consumer integration and actual application/game startup, rollback, shutdown
 and unload acceptance remain separate work.
+
+The current target probe requires all eleven pinned-runner create/remove
+classifications to succeed; a refusal fails its CTest case. This stronger gate
+does not turn create/remove into API execution or application acceptance.
 
 ## Inherited reference evidence
 

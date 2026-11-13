@@ -47,6 +47,17 @@ int main(void)
     check(!memcmp(code+512,vex,5), "preserve VEX instruction instead of emitting Jcc");
     memcpy(code+64,xbegin,sizeof xbegin);
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");
+    {
+        const BYTE load[]={0x48,0x8b,0x44,0x24,0x60};
+        const BYTE stack[]={0x48,0x83,0xec,0x38};
+        const BYTE frame[]={0x48,0x89,0xcd};
+        memcpy(code+128,load,sizeof(load));
+        check(MthInternal_IsUnwindNeutralInstruction(code+128,sizeof(load),0),"allow stack-relative load after a short prologue");
+        memcpy(code+128,stack,sizeof(stack));
+        check(!MthInternal_IsUnwindNeutralInstruction(code+128,sizeof(stack),0),"refuse undescribed body stack adjustment");
+        memcpy(code+128,frame,sizeof(frame));
+        check(!MthInternal_IsUnwindNeutralInstruction(code+128,sizeof(frame),5),"refuse body modification of the active frame register");
+    }
     memset(code,0x90,info.dwPageSize);
     code[info.dwPageSize-1]=0xc3;
     check(VirtualProtect(code+info.dwPageSize,info.dwPageSize,PAGE_NOACCESS,&old),

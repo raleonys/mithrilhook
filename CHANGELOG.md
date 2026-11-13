@@ -2,6 +2,14 @@
 
 ## 0.1.0 development candidate
 
+- Register owned x64 unwind metadata for supported relocated prefixes, with a
+  synthetic prologue covering the jump-back and an unchanged 64-byte code limit.
+  Generated nonleaf entries use version 2 on Windows 10 and later; older or
+  unknown systems retain strict refusal for those prefixes.
+- Keep runtime-table registry calls outside owned suspension windows; retain
+  and recover registration/deletion/storage failures without losing owners.
+- Require all eleven pinned-runner targets to pass create/remove classification;
+  add native virtual-unwind, owned-code execution and registry failure cases.
 - Reconcile suspended peer IPs against physically committed hook transitions
   after preparation or partial-batch failures; retain failed repairs for retry.
 - Recheck live peer coverage after suspension and refuse an observed late birth
@@ -10,6 +18,8 @@
   language handlers or chained metadata that the trampoline does not provide.
 - Add deterministic failure cases, genuine runtime-function/unwind checks and
   precise reconciliation/coverage/unwind negative controls.
+- Report the eleven create-only target classifications and compare x64 results
+  with the unwind guard removed; unsupported targets remain integration blockers.
 - Apply the approved five-pixel logo alignment without regenerating the artwork.
 - Established an independent MTH API, MithrilHook package/DLL identity and CMake
   target; removed the legacy compatibility header and inherited build products.

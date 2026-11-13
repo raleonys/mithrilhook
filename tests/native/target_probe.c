@@ -13,6 +13,27 @@ static void require(BOOL ok,const char *why)
 }
 static void WINAPI unused_detour(void) {}
 
+static void report_unwind(FARPROC target,const char *name)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    DWORD64 base=0;PRUNTIME_FUNCTION entry=RtlLookupFunctionEntry((DWORD64)(ULONG_PTR)target,&base,NULL);
+    BYTE bytes[24],info[132];SIZE_T copied;unsigned i,size;
+    printf("UNWIND_TARGET name=%s registered=%u",name,entry!=NULL);
+    if(ReadProcessMemory(GetCurrentProcess(),(LPCVOID)target,bytes,sizeof(bytes),&copied) && copied==sizeof(bytes))
+    {printf(" code=");for(i=0;i<sizeof(bytes);++i)printf("%02x",bytes[i]);}
+    if(entry && ReadProcessMemory(GetCurrentProcess(),(LPCVOID)(ULONG_PTR)(base+entry->UnwindData),info,4,&copied) && copied==4)
+    {
+        printf(" version=%u flags=%u prolog=%u slots=%u frame=%u interior=%u",info[0]&7,info[0]>>3,info[1],info[2],info[3],(DWORD64)(ULONG_PTR)target-base!=entry->BeginAddress);
+        size=info[2]*2;if(size>128)size=128;
+        if(ReadProcessMemory(GetCurrentProcess(),(LPCVOID)(ULONG_PTR)(base+entry->UnwindData+4),info+4,size,&copied) && copied==size)
+        {printf(" unwind_codes=");for(i=0;i<size;++i)printf("%02x",info[4+i]);}
+    }
+    putchar('\n');
+#else
+    (void)target;(void)name;
+#endif
+}
+
 int main(void)
 {
     static const WCHAR *modules[]={L"ws2_32.dll",L"KernelBase.dll",L"shell32.dll",L"crypt32.dll"};
@@ -31,6 +52,7 @@ int main(void)
         BYTE before[5],after[5];SIZE_T copied;
         MTH_STATUS status;
         require(target!=NULL,"resolve real application hook target");
+        report_unwind(target,targets[i].name);
         require(ReadProcessMemory(GetCurrentProcess(),(LPCVOID)target,before,sizeof(before),&copied) && copied==sizeof(before),"read immutable pre-probe target bytes");
         status=MTH_CreateHook((LPVOID)target,(LPVOID)unused_detour,&original);
         if(status==MTH_OK)
@@ -49,5 +71,8 @@ int main(void)
     require(MTH_Uninitialize()==MTH_OK,"retire compatibility-probe engine");
     for(i=0;i<4;++i)require(FreeLibrary(handles[i]),"release held target-probe module");
     printf("TARGET_PROBE_SUMMARY accepted=%u refused=%u total=11 application_acceptance=NOT_ESTABLISHED\n",accepted,refused);
+#if defined(MTH_REQUIRE_ALL_TARGETS)
+    require(accepted==11 && refused==0,"all eleven pinned-runner targets must support create/remove");
+#endif
     return 0;
 }

@@ -52,9 +52,9 @@
 
 // Maximum size of a trampoline function.
 #if defined(_M_X64) || defined(__x86_64__)
-    #define TRAMPOLINE_MAX_SIZE (MEMORY_SLOT_SIZE - sizeof(JMP_ABS))
+    #define TRAMPOLINE_MAX_SIZE (MEMORY_CODE_SIZE - sizeof(JMP_ABS))
 #else
-    #define TRAMPOLINE_MAX_SIZE MEMORY_SLOT_SIZE
+    #define TRAMPOLINE_MAX_SIZE MEMORY_CODE_SIZE
 #endif
 
 //-------------------------------------------------------------------------
@@ -146,6 +146,78 @@ static BOOL IsCodePadding(LPBYTE pInst, UINT size)
     return TRUE;
 }
 
+#if defined(_M_X64) || defined(__x86_64__)
+static BOOL IsUnwindRegisterProtected(UINT reg, UINT frameRegister)
+{
+    return reg == 4 || (frameRegister != 0 && reg == frameRegister);
+}
+#endif
+
+/* Body instructions copied after a short prologue must not change the stack or
+ * active frame register. Unknown forms are refused rather than misdescribed by
+ * prologue metadata; the whitelist is deliberately narrower than the decoder. */
+BOOL MthInternal_IsUnwindNeutralInstruction(LPCVOID address, UINT length, UINT frameRegister)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    BYTE bytes[16] = {0};
+    HDE hs;
+    UINT op, reg, rm;
+    SIZE_T readable = CopyReadableCode(bytes, address, sizeof(bytes));
+    if (readable < length || HDE_DISASM(bytes, &hs) != length || (hs.flags & F_ERROR))
+        return FALSE;
+    op = hs.opcode;
+    reg = hs.modrm_reg + (hs.rex_r ? 8 : 0);
+    rm = hs.modrm_rm + (hs.rex_b ? 8 : 0);
+    if (op == 0xe8 || op == 0xe9 || op == 0xeb || (op >= 0x70 && op <= 0x7f) ||
+        (op >= 0xe0 && op <= 0xe3) || op == 0x84 || op == 0x85 || op == 0xa8 || op == 0xa9)
+        return TRUE;
+    if (op >= 0x90 && op <= 0x97)
+        return !IsUnwindRegisterProtected(0, frameRegister) &&
+            !IsUnwindRegisterProtected((op & 7) + (hs.rex_b ? 8 : 0), frameRegister);
+    if (op >= 0xb0 && op <= 0xbf)
+        return !IsUnwindRegisterProtected((op & 7) + (hs.rex_b ? 8 : 0), frameRegister);
+    if (op == 0x8a || op == 0x8b || op == 0x8d || op == 0x63 || op == 0x69 || op == 0x6b)
+        return !IsUnwindRegisterProtected(reg, frameRegister);
+    if (op == 0x88 || op == 0x89 || op == 0xc6 || op == 0xc7 ||
+        op == 0xc0 || op == 0xc1 || (op >= 0xd0 && op <= 0xd3) || op == 0xfe)
+        return hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister);
+    if (op == 0x86 || op == 0x87)
+        return !IsUnwindRegisterProtected(reg, frameRegister) &&
+            (hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister));
+    if (op <= 0x3d && (op & 7) <= 5)
+    {
+        if (op >= 0x38) return TRUE; /* CMP. */
+        if ((op & 7) >= 4) return !IsUnwindRegisterProtected(0, frameRegister);
+        return (op & 2) ? !IsUnwindRegisterProtected(reg, frameRegister) :
+            (hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister));
+    }
+    if (op == 0x80 || op == 0x81 || op == 0x83)
+        return hs.modrm_reg == 7 || hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister);
+    if (op == 0xf6 || op == 0xf7)
+        return hs.modrm_reg == 0 || hs.modrm_reg >= 4 ||
+            ((hs.modrm_reg == 2 || hs.modrm_reg == 3) &&
+             (hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister)));
+    if (op == 0xff)
+        return hs.modrm_reg == 2 || hs.modrm_reg == 4 ||
+            ((hs.modrm_reg == 0 || hs.modrm_reg == 1) &&
+             (hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister)));
+    if (op == 0x0f)
+    {
+        if ((hs.opcode2 >= 0x80 && hs.opcode2 <= 0x8f) || hs.opcode2 == 0x1f ||
+            (hs.opcode2 == 0x1e && hs.p_rep == 0xf3 && hs.modrm == 0xfa)) return TRUE;
+        if ((hs.opcode2 >= 0x40 && hs.opcode2 <= 0x4f) || hs.opcode2 == 0xaf ||
+            hs.opcode2 == 0xb6 || hs.opcode2 == 0xb7 || hs.opcode2 == 0xbe || hs.opcode2 == 0xbf)
+            return !IsUnwindRegisterProtected(reg, frameRegister);
+        if (hs.opcode2 >= 0x90 && hs.opcode2 <= 0x9f)
+            return hs.modrm_mod != 3 || !IsUnwindRegisterProtected(rm, frameRegister);
+    }
+    return FALSE;
+#else
+    (void)address; (void)length; (void)frameRegister;
+    return TRUE;
+#endif
+}
+
 //-------------------------------------------------------------------------
 BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 {
@@ -188,6 +260,7 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
     ct->patchAbove = FALSE;
     ct->nIP        = 0;
     ct->oldSize    = 0;
+    ct->newSize    = 0;
 
     do
     {
@@ -377,7 +450,10 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         // Avoid using memcpy to reduce the footprint.
         memcpy((LPBYTE)ct->pTrampoline + newPos, pCopySrc, copySize);
         if (oldPos < sizeof(JMP_REL))
+        {
             ct->oldSize = oldPos + hs.len;
+            ct->newSize = newPos + copySize;
+        }
         newPos += copySize;
         oldPos += hs.len;
     } while (!finished);
@@ -403,6 +479,7 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         ct->patchAbove = TRUE;
     }
 
+    ct->codeSize = newPos;
 #if defined(_M_X64) || defined(__x86_64__)
     // Create a relay function.
     jmp.address = (ULONG_PTR)ct->pDetour;
