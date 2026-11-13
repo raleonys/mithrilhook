@@ -98,6 +98,17 @@ int main(void)
         check(!MthInternal_IsUnwindNeutralInstruction(code+128,sizeof(frame),5),"refuse body modification of the active frame register");
     }
     byte_alias_cases(code+128);
+    {
+        UINT payload,reg;
+        for(payload=0;payload<256;++payload)
+        for(reg=0;reg<8;++reg)
+        {
+            BYTE rex2[]={0xd5,(BYTE)payload,(BYTE)(0xb0+reg),0x10};
+            memcpy(code+128,rex2,sizeof(rex2));
+            check(!MthInternal_IsUnwindNeutralInstruction(code+128,sizeof(rex2),0),
+                "no REX2/APX stream is inferred neutral from legacy byte aliases");
+        }
+    }
     memset(code,0x90,info.dwPageSize);
     code[info.dwPageSize-1]=0xc3;
     check(VirtualProtect(code+info.dwPageSize,info.dwPageSize,PAGE_NOACCESS,&old),

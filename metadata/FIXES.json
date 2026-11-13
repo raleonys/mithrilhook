@@ -105,6 +105,16 @@
       "id": "F21",
       "change": "Normalize high-byte and REX byte-register aliases before unwind stack/frame protection checks",
       "origin": "MithrilHook review #8; predicate-level alias mismatch"
+    },
+    {
+      "id": "F22",
+      "change": "Refuse relocated CALL-next address-discovery idioms before publication; preserve ordinary relative calls",
+      "origin": "MithrilHook review #10; explicit return-address-observation boundary"
+    },
+    {
+      "id": "F23",
+      "change": "Refuse unsupported copied REX2/APX forms and any inferred unwind-neutral APX instruction",
+      "origin": "MithrilHook review #11; decoder recognition does not establish a complete APX register/unwind contract"
     }
   ],
   "excluded_unreviewed_proposals": {

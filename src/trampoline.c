@@ -170,7 +170,8 @@ BOOL MthInternal_IsUnwindNeutralInstruction(LPCVOID address, UINT length, UINT f
     UINT op, reg, rm;
     BOOL byteOperand;
     SIZE_T readable = CopyReadableCode(bytes, address, sizeof(bytes));
-    if (readable < length || HDE_DISASM(bytes, &hs) != length || (hs.flags & F_ERROR))
+    if (readable < length || HDE_DISASM(bytes, &hs) != length ||
+        (hs.flags & (F_ERROR | F_PREFIX_REX2)))
         return FALSE;
     op = hs.opcode;
     byteOperand = (op >= 0xb0 && op <= 0xb7) || op == 0x88 || op == 0x8a ||
@@ -300,6 +301,21 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         if (oldPos < sizeof(JMP_REL) && hs.p_66 && (hs.opcode == 0xe8 || hs.opcode == 0xe9 ||
             (hs.opcode == 0x0f && hs.opcode2 >= 0x80 && hs.opcode2 <= 0x8f)))
             return FALSE;
+
+        if (oldPos < sizeof(JMP_REL))
+        {
+#if defined(_M_X64) || defined(__x86_64__)
+            /* The decoder recognizes REX2 lengths, but the engine has no full
+             * APX register/unwind contract. Never infer one from legacy REX. */
+            if (hs.flags & F_PREFIX_REX2)
+                return FALSE;
+#endif
+            /* A call-next can expose its return address as data (get-PC).
+             * Rewriting the CALL changes that value; PUSH/JMP emulation would
+             * also violate shadow-stack contracts. Refuse this known idiom. */
+            if (hs.opcode == 0xe8 && hs.imm.imm32 == 0)
+                return FALSE;
+        }
 
         pCopySrc = instBuf;
         if (oldPos >= sizeof(JMP_REL))

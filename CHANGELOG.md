@@ -5,6 +5,11 @@ There is no published release or release tag. The CMake project version is
 
 ## Unreleased
 
+- Refuse copied CALL-next/get-PC idioms and unsupported x64 REX2/APX forms
+  before publication; explicitly document return-address-observation limits.
+- Keep ordinary CALL and legacy/REX byte-alias controls; add nonexecuting APX
+  refusal/publication cases and complete ordinary-CALL lifecycle coverage.
+
 - Refuse ambiguous 66-prefixed near CALL/JMP/Jcc forms before publishing a
   trampoline; preserve ordinary unprefixed branch behavior.
 - Normalize AH/CH/DH/BH and REX byte destinations in the unwind-neutral filter,

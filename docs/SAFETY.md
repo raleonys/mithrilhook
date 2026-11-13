@@ -43,6 +43,12 @@ an unrecoverable failure.
    foreign patching. The consumer must control those lifetimes.
 4. The decoder and relocated instruction forms are finite. The #363 changes
    improve specific RIP/EIP/VEX/relative cases, not all future ISA encodings.
+   Copied REX2/APX forms are refused: recognizing their lengths does not provide
+   a complete engine register/unwind/mitigation contract. No APX execution is
+   implied by decoder or refusal tests. CALL-next address-discovery idioms are
+   also refused before publication. More generally, a relocated CALL changes
+   the return address observed by its callee; arbitrary return-address
+   introspection is outside this engine's semantic-preservation contract.
 5. Supported version-1 x64 prefixes receive owned version-2 unwind metadata
    on Windows 10 and later. Older/unknown systems retain refusal when generated
    nonleaf metadata is needed. An explicit empty epilogue set and synthetic
