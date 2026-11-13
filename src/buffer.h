@@ -27,17 +27,35 @@
  */
 
 #pragma once
+#include <stddef.h>
 
 // Size of each memory slot.
 #if defined(_M_X64) || defined(__x86_64__)
-    #define MEMORY_SLOT_SIZE 64
+    #define MEMORY_SLOT_SIZE 256
+    #define MEMORY_CODE_SIZE 64
+    #define MTH_UNWIND_CODE_SLOTS 64
+    typedef struct _MTH_UNWIND_STORAGE
+    {
+        RUNTIME_FUNCTION functions[2];
+        BYTE info[4 + MTH_UNWIND_CODE_SLOTS * 2];
+        BYTE jumpInfo[4 + sizeof(RUNTIME_FUNCTION)];
+        DWORD count;
+        BOOL registered;
+        BOOL restorePending;
+    } MTH_UNWIND_STORAGE, *PMTH_UNWIND_STORAGE;
+    typedef char MTH_UNWIND_STORAGE_FITS[(MEMORY_CODE_SIZE + sizeof(MTH_UNWIND_STORAGE) <= MEMORY_SLOT_SIZE) ? 1 : -1];
+    #define MTH_BUFFER_UNWIND(buffer) ((PMTH_UNWIND_STORAGE)((LPBYTE)(buffer) + MEMORY_CODE_SIZE))
 #else
     #define MEMORY_SLOT_SIZE 32
+    #define MEMORY_CODE_SIZE 32
 #endif
 
 VOID   MthInternal_InitializeBuffer(VOID);
 BOOL   MthInternal_UninitializeBuffer(VOID);
 LPVOID MthInternal_AllocateBuffer(LPVOID pOrigin);
 BOOL   MthInternal_FreeBuffer(LPVOID pBuffer);
+BOOL   MthInternal_RegisterBufferUnwind(LPVOID pBuffer);
+BOOL   MthInternal_RetryBufferUnwind(VOID);
+BOOL   MthInternal_HasPendingBufferUnwind(VOID);
 BOOL   MthInternal_IsBufferAddress(ULONG_PTR address);
 BOOL   MthInternal_IsExecutableAddress(LPVOID pAddress);

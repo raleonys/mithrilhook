@@ -101,8 +101,8 @@ extern "C" {
     // Reports whether this thread currently owns a MithrilHook operation.
     BOOL WINAPI MTH_IsOperationInProgressOnThisThread(VOID);
 
-    // Uninitialize the MithrilHook library. You must call this function EXACTLY
-    // ONCE at the end of your program.
+    // Uninitialize after closing original-call admission and draining users.
+    // Failed cleanup retains ownership and must be retried before unloading.
     MTH_STATUS WINAPI MTH_Uninitialize(VOID);
 
     // Creates a hook for the specified target function, in disabled state.
@@ -147,7 +147,8 @@ extern "C" {
     MTH_STATUS WINAPI MTH_CreateHookApiEx(
         LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID *ppOriginal, LPVOID *ppTarget);
 
-    // Removes an already created hook.
+    // Removes an already created hook after original-call admission is closed
+    // and users have drained. Keep admission closed through cleanup retries.
     // Parameters:
     //   pTarget [in] A pointer to the target function.
     MTH_STATUS WINAPI MTH_RemoveHook(LPVOID pTarget);

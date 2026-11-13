@@ -71,5 +71,8 @@ int main(void)
     require(MTH_Uninitialize()==MTH_OK,"retire compatibility-probe engine");
     for(i=0;i<4;++i)require(FreeLibrary(handles[i]),"release held target-probe module");
     printf("TARGET_PROBE_SUMMARY accepted=%u refused=%u total=11 application_acceptance=NOT_ESTABLISHED\n",accepted,refused);
+#if defined(MTH_REQUIRE_ALL_TARGETS)
+    require(accepted==11 && refused==0,"all eleven pinned-runner targets must support create/remove");
+#endif
     return 0;
 }

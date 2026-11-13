@@ -650,7 +650,7 @@ static BOOL ReleaseFrozenThreadOwnership(PFROZEN_THREADS pThreads)
 
 static BOOL PreserveFrozenThreadOwnership(PFROZEN_THREADS pThreads)
 {
-    if (!g_patchCompletion.active && ReconcileThreadIPs(pThreads) &&
+    if (!g_patchCompletion.active && !MthInternal_HasPendingBufferUnwind() && ReconcileThreadIPs(pThreads) &&
         ReleaseFrozenThreadOwnership(pThreads))
         return TRUE;
     if (g_retainedThreads.pItems != NULL)
@@ -665,9 +665,15 @@ static BOOL PreserveFrozenThreadOwnership(PFROZEN_THREADS pThreads)
 static BOOL RetryRetainedThreadOwnership(VOID)
 {
     /* Never resume peers into an instruction stream whose completion failed. */
-    if (!RetryPatchCompletion() || !ReconcileThreadIPs(&g_retainedThreads))
+    if (!RetryPatchCompletion() ||
+        (MthInternal_HasPendingBufferUnwind() && g_retainedThreads.pItems != NULL) ||
+        !ReconcileThreadIPs(&g_retainedThreads))
         return FALSE;
     if (!ReleaseEmergencyThreadOwnership() || !ReleaseFrozenThreadOwnership(&g_retainedThreads))
+        return FALSE;
+    /* RtlAdd/DeleteFunctionTable may acquire locks held by other threads.
+     * Registry recovery is therefore outside every owned suspension window. */
+    if (!MthInternal_RetryBufferUnwind())
         return FALSE;
     if (g_retainedBuffer != NULL)
     {
@@ -899,13 +905,16 @@ static MTH_STATUS RetireHookEntry(UINT pos)
     MTH_STATUS status;
     g_retiringBuffer = g_hooks.pItems[pos].pTrampoline;
     status = Freeze(&threads, ALL_HOOKS_POS, ACTION_RETIRE);
+    /* Admission must stay closed across this observation/resume/release phase.
+     * Runtime-table deletion cannot run while a suspended peer holds its lock. */
+    if (status == MTH_OK)
+        status = FinishFreeze(&threads, status);
     if (status == MTH_OK)
     {
         if (MthInternal_FreeBuffer(g_hooks.pItems[pos].pTrampoline))
             DeleteHookEntry(pos);
         else
             status = MTH_ERROR_MEMORY_PROTECT;
-        status = FinishFreeze(&threads, status);
     }
     g_retiringBuffer = NULL;
     return status;
@@ -918,12 +927,13 @@ static MTH_STATUS RetireAllBuffers(VOID)
     g_retiringBuffer = NULL;
     status = Freeze(&threads, ALL_HOOKS_POS, ACTION_RETIRE);
     if (status == MTH_OK)
+        status = FinishFreeze(&threads, status);
+    if (status == MTH_OK)
     {
         /* Some blocks may be released before a later release fails. */
         g_shutdownPending = TRUE;
         if (!MthInternal_UninitializeBuffer())
             status = MTH_ERROR_MEMORY_PROTECT;
-        status = FinishFreeze(&threads, status);
     }
     return status;
 }
@@ -1126,10 +1136,34 @@ MTH_STATUS WINAPI MTH_Uninitialize(VOID)
 }
 
 //-------------------------------------------------------------------------
-/* No generated x64 unwind table is advertised. A valid registered function may
- * only use the leaf fallback while executing the relocated prefix if that
- * prefix contains no unwind operation and no language/chained handler applies.
- * Reject the unsupported cases instead of publishing a misleading trampoline. */
+#if defined(_M_X64) || defined(__x86_64__)
+static BOOL IsNonvolatileUnwindRegister(UINT reg)
+{
+    return reg == 3 || reg == 5 || reg == 6 || reg == 7 || (reg >= 12 && reg <= 15);
+}
+
+static BOOL MapUnwindOffset(const TRAMPOLINE *ct, UINT offset, BYTE *mapped)
+{
+    UINT i;
+    if (offset == ct->oldSize)
+    {
+        *mapped = ct->newSize;
+        return TRUE;
+    }
+    for (i = 0; i < ct->nIP; ++i)
+        if (ct->oldIPs[i] == offset)
+        {
+            *mapped = ct->newIPs[i];
+            return TRUE;
+        }
+    return FALSE;
+}
+#endif
+
+/* Describe only the operations actually present in the relocated prefix.
+ * The jump-back is a separate chained fragment, marked wholly as a prologue;
+ * otherwise Windows can mistake FF25 for an already-restored tail-call epilogue.
+ * Language scopes and unknown/chained source formats remain unsupported. */
 static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
 {
 #if defined(_M_X64) || defined(__x86_64__)
@@ -1138,8 +1172,11 @@ static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
     RUNTIME_FUNCTION function;
     BYTE info[4 + 255 * 2];
     SIZE_T copied = 0;
-    UINT index, count;
+    UINT index, count, output = 0, previous = 256;
+    UINT flags, frameRegister;
     DWORD64 address;
+    PMTH_UNWIND_STORAGE generated = MTH_BUFFER_UNWIND(ct->pTrampoline);
+    BOOL copiedFrame = FALSE;
     if (found == NULL)
         return TRUE; /* An ABI-valid unregistered function must already be leaf-unwindable. */
     if (!ReadProcessMemory(GetCurrentProcess(), found, &function, sizeof(function), &copied) ||
@@ -1153,7 +1190,11 @@ static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
     if (address > (DWORD64)-1 - sizeof(info) ||
         !ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(ULONG_PTR)address, info, 4, &copied) || copied != 4)
         return FALSE;
-    if (info[0] != 1) /* Version 1, no handler or chained-info flags. */
+    flags = info[0] >> 3;
+    frameRegister = info[3] & 15;
+    if ((info[0] & 7) != 1 || (flags & ~3U) != 0 ||
+        ((flags & 3) != 0 && ct->oldSize > info[1]) ||
+        (frameRegister != 0 && !IsNonvolatileUnwindRegister(frameRegister)))
         return FALSE;
     count = info[2];
     if (!ReadProcessMemory(GetCurrentProcess(), (LPCVOID)(ULONG_PTR)(address + 4), info + 4,
@@ -1165,26 +1206,84 @@ static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
         UINT operation = info[5 + index * 2] & 15;
         UINT operand = info[5 + index * 2] >> 4;
         UINT slots;
-        if (offset == 0 || offset > info[1] || offset <= ct->oldSize)
+        BYTE mapped;
+        if (offset == 0 || offset > info[1] || offset > previous)
             return FALSE;
+        previous = offset;
         switch (operation)
         {
-        case 0: case 2: case 3: slots = 1; break;
+        case 0:
+            if (!IsNonvolatileUnwindRegister(operand)) return FALSE;
+            slots = 1;
+            break;
+        case 2: slots = 1; break;
+        case 3:
+            if (operand != 0 || frameRegister == 0) return FALSE;
+            slots = 1;
+            break;
         case 1:
             if (operand > 1) return FALSE;
             slots = operand == 0 ? 2 : 3;
             break;
-        case 4: case 8: slots = 2; break;
-        case 5: case 9: slots = 3; break;
-        case 10:
-            if (operand > 1) return FALSE;
-            slots = 1;
+        case 4: case 5:
+            if (!IsNonvolatileUnwindRegister(operand)) return FALSE;
+            slots = operation == 4 ? 2 : 3;
+            break;
+        case 8: case 9:
+            if (operand < 6) return FALSE;
+            slots = operation == 8 ? 2 : 3;
             break;
         default: return FALSE;
         }
         if (slots > count - index)
             return FALSE;
+        if (offset <= ct->oldSize)
+        {
+            if (slots > MTH_UNWIND_CODE_SLOTS - output || !MapUnwindOffset(ct, offset, &mapped))
+                return FALSE;
+            memcpy(generated->info + 4 + output * 2, info + 4 + index * 2, slots * 2);
+            generated->info[4 + output * 2] = mapped;
+            output += slots;
+            if (operation == 3) copiedFrame = TRUE;
+        }
         index += slots;
+    }
+    if (output == 0)
+        return TRUE; /* No copied stack/nonvolatile operation: leaf fallback remains valid. */
+    if (ct->oldSize > info[1])
+    {
+        for (index = 0; index < ct->nIP && ct->oldIPs[index] < ct->oldSize; ++index)
+        {
+            UINT start = ct->oldIPs[index];
+            UINT end = index + 1 < ct->nIP ? ct->oldIPs[index + 1] : ct->oldSize;
+            if (end > ct->oldSize) end = ct->oldSize;
+            if ((start < info[1] && end > info[1]) ||
+                (start >= info[1] && !MthInternal_IsUnwindNeutralInstruction(
+                    (LPBYTE)ct->pTarget + start, end - start, frameRegister)))
+                return FALSE;
+        }
+    }
+    if (ct->newSize == 0 || ct->codeSize < ct->newSize || ct->codeSize > MEMORY_CODE_SIZE)
+        return FALSE;
+    generated->info[0] = 1;
+    generated->info[1] = ct->newSize;
+    generated->info[2] = (BYTE)output;
+    generated->info[3] = copiedFrame ? info[3] : 0;
+    generated->functions[0].BeginAddress = 0;
+    generated->functions[0].EndAddress = ct->newSize;
+    generated->functions[0].UnwindData = MEMORY_CODE_SIZE + (DWORD)offsetof(MTH_UNWIND_STORAGE, info);
+    generated->count = 1;
+    if (ct->codeSize != ct->newSize)
+    {
+        generated->jumpInfo[0] = 1 | (4 << 3); /* UNW_FLAG_CHAININFO. */
+        generated->jumpInfo[1] = ct->codeSize - ct->newSize;
+        generated->jumpInfo[2] = 0;
+        generated->jumpInfo[3] = generated->info[3];
+        memcpy(generated->jumpInfo + 4, &generated->functions[0], sizeof(RUNTIME_FUNCTION));
+        generated->functions[1].BeginAddress = ct->newSize;
+        generated->functions[1].EndAddress = ct->codeSize;
+        generated->functions[1].UnwindData = MEMORY_CODE_SIZE + (DWORD)offsetof(MTH_UNWIND_STORAGE, jumpInfo);
+        generated->count = 2;
     }
 #else
     (void)ct;
@@ -1223,7 +1322,8 @@ MTH_STATUS WINAPI MTH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID *ppOrigi
                     if (MthInternal_CreateTrampolineFunction(&ct) && IsRelocationUnwindSafe(&ct))
                     {
                         PHOOK_ENTRY pHook = NULL;
-                        if (FlushInstructionCache(GetCurrentProcess(), pBuffer, MEMORY_SLOT_SIZE))
+                        if (MthInternal_RegisterBufferUnwind(pBuffer) &&
+                            FlushInstructionCache(GetCurrentProcess(), pBuffer, MEMORY_SLOT_SIZE))
                             pHook = AddHookEntry();
                         else
                             status = MTH_ERROR_MEMORY_PROTECT;

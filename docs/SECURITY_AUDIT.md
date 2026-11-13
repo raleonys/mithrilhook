@@ -86,7 +86,7 @@ References:
 
 ## Validation and related asset change
 
-The workflow registers 22 tests on x64 and 18 on Win32, across seven native
+The workflow registers 23 tests on x64 and 18 on Win32, across seven native
 configurations, plus the two portable decoder/relocator tests. Results must be
 read for the exact PR head; configured or cross-built tests are not native PASS.
 
@@ -102,7 +102,11 @@ https://github.com/raleonys/mithrilhook/actions/runs/43441584117.
 The MSVC Release artifact reports x64 create/remove support for `connect`,
 `SHGetFolderPathA` and `SHGetFolderPathW`; the five registry functions,
 `CreateProcessA/W` and `CryptQueryObject` were refused. Win32 accepted all eleven.
-This means the current x64 candidate is **not ready for eleven-hook integration**.
+That refusal-only predecessor was **not ready for eleven-hook integration**.
+The follow-up described in UNWIND.md supplies bounded generated metadata rather
+than disabling that safety requirement. Its exact-head target gate must accept
+all eleven pinned-runner targets; it no longer treats a refusal as a passing
+production-probe result.
 
 The x64 comparison fixture now also runs the same create-only probe against the
 precisely guard-removed engine. It reports which refusals are introduced by the

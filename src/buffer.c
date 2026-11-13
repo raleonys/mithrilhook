@@ -64,6 +64,83 @@ typedef struct _MEMORY_BLOCK
 // First element of the memory block list.
 static PMEMORY_BLOCK g_pMemoryBlocks;
 
+BOOL MthInternal_RegisterBufferUnwind(LPVOID pBuffer)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    PMTH_UNWIND_STORAGE unwind = MTH_BUFFER_UNWIND(pBuffer);
+    if (unwind->count == 0 || unwind->registered)
+        return TRUE;
+    if (!RtlAddFunctionTable(unwind->functions, unwind->count, (DWORD64)(ULONG_PTR)pBuffer))
+        return FALSE;
+    unwind->registered = TRUE;
+    unwind->restorePending = FALSE;
+#else
+    (void)pBuffer;
+#endif
+    return TRUE;
+}
+
+static BOOL UnregisterSlotUnwind(LPVOID pBuffer)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    PMTH_UNWIND_STORAGE unwind = MTH_BUFFER_UNWIND(pBuffer);
+    if (unwind->registered)
+    {
+        if (!RtlDeleteFunctionTable(unwind->functions))
+            return FALSE;
+        unwind->registered = FALSE;
+        /* If memory release later fails, restore the published table before
+         * any suspended peer can resume into the retained trampoline. */
+        unwind->restorePending = TRUE;
+    }
+#else
+    (void)pBuffer;
+#endif
+    return TRUE;
+}
+
+BOOL MthInternal_RetryBufferUnwind(VOID)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    PMEMORY_BLOCK block;
+    BOOL complete = TRUE;
+    for (block = g_pMemoryBlocks; block != NULL; block = block->pNext)
+    {
+        PMEMORY_SLOT slot = (PMEMORY_SLOT)block + 1;
+        for (; (ULONG_PTR)slot - (ULONG_PTR)block <= MEMORY_BLOCK_SIZE - MEMORY_SLOT_SIZE; ++slot)
+            if (MTH_BUFFER_UNWIND(slot)->restorePending && !MthInternal_RegisterBufferUnwind(slot))
+                complete = FALSE;
+    }
+    return complete;
+#else
+    return TRUE;
+#endif
+}
+
+BOOL MthInternal_HasPendingBufferUnwind(VOID)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    PMEMORY_BLOCK block;
+    for (block = g_pMemoryBlocks; block != NULL; block = block->pNext)
+    {
+        PMEMORY_SLOT slot = (PMEMORY_SLOT)block + 1;
+        for (; (ULONG_PTR)slot - (ULONG_PTR)block <= MEMORY_BLOCK_SIZE - MEMORY_SLOT_SIZE; ++slot)
+            if (MTH_BUFFER_UNWIND(slot)->restorePending)
+                return TRUE;
+    }
+#endif
+    return FALSE;
+}
+
+static BOOL UnregisterBlockUnwind(PMEMORY_BLOCK block)
+{
+    PMEMORY_SLOT slot = (PMEMORY_SLOT)block + 1;
+    for (; (ULONG_PTR)slot - (ULONG_PTR)block <= MEMORY_BLOCK_SIZE - MEMORY_SLOT_SIZE; ++slot)
+        if (!UnregisterSlotUnwind(slot))
+            return FALSE;
+    return TRUE;
+}
+
 //-------------------------------------------------------------------------
 VOID MthInternal_InitializeBuffer(VOID)
 {
@@ -77,8 +154,11 @@ BOOL MthInternal_UninitializeBuffer(VOID)
     {
         PMEMORY_BLOCK block = g_pMemoryBlocks;
         PMEMORY_BLOCK next = block->pNext;
-        if (!VirtualFree(block, 0, MEM_RELEASE))
+        if (!UnregisterBlockUnwind(block) || !VirtualFree(block, 0, MEM_RELEASE))
+        {
+            (void)MthInternal_RetryBufferUnwind();
             return FALSE;
+        }
         g_pMemoryBlocks = next;
     }
     return TRUE;
@@ -268,6 +348,9 @@ LPVOID MthInternal_AllocateBuffer(LPVOID pOrigin)
     // Fill the slot with INT3 for debugging.
     memset(pSlot, 0xCC, sizeof(MEMORY_SLOT));
 #endif
+#if defined(_M_X64) || defined(__x86_64__)
+    memset(MTH_BUFFER_UNWIND(pSlot), 0, sizeof(MTH_UNWIND_STORAGE));
+#endif
     return pSlot;
 }
 
@@ -280,11 +363,19 @@ BOOL MthInternal_FreeBuffer(LPVOID pBuffer)
     {
         if ((ULONG_PTR)block == target)
         {
+            if ((ULONG_PTR)pBuffer < (ULONG_PTR)block + MEMORY_SLOT_SIZE ||
+                ((ULONG_PTR)pBuffer - (ULONG_PTR)block) % MEMORY_SLOT_SIZE != 0)
+                return FALSE;
+            if (!UnregisterSlotUnwind(pBuffer))
+                return FALSE;
             if (block->usedCount == 1)
             {
                 PMEMORY_BLOCK next = block->pNext;
                 if (!VirtualFree(block, 0, MEM_RELEASE))
+                {
+                    (void)MthInternal_RetryBufferUnwind();
                     return FALSE;
+                }
                 if (previous != NULL) previous->pNext = next;
                 else g_pMemoryBlocks = next;
             }
@@ -293,6 +384,9 @@ BOOL MthInternal_FreeBuffer(LPVOID pBuffer)
                 PMEMORY_SLOT slot = (PMEMORY_SLOT)pBuffer;
 #ifdef _DEBUG
                 memset(slot, 0, sizeof(MEMORY_SLOT));
+#endif
+#if defined(_M_X64) || defined(__x86_64__)
+                memset(MTH_BUFFER_UNWIND(slot), 0, sizeof(MTH_UNWIND_STORAGE));
 #endif
                 slot->pNext = block->pFree;
                 block->pFree = slot;

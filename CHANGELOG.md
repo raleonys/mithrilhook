@@ -2,6 +2,12 @@
 
 ## 0.1.0 development candidate
 
+- Register owned x64 unwind metadata for supported relocated prefixes, with a
+  separate chained jump-back fragment and an unchanged 64-byte code limit.
+- Keep runtime-table registry calls outside owned suspension windows; retain
+  and recover registration/deletion/storage failures without losing owners.
+- Require all eleven pinned-runner targets to pass create/remove classification;
+  add native virtual-unwind, owned-code execution and registry failure cases.
 - Reconcile suspended peer IPs against physically committed hook transitions
   after preparation or partial-batch failures; retain failed repairs for retry.
 - Recheck live peer coverage after suspension and refuse an observed late birth
