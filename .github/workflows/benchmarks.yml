@@ -36,5 +36,5 @@ jobs:
           name: hook-benchmark-${{ matrix.arch }}
           path: |
             build/bench-results
-            build/bench-prepared/inputs.json
+            build/bench-prepared
             build/bench-native/CMakeCache.txt

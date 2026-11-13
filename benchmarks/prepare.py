@@ -28,7 +28,12 @@ def prepare():
  patch.write_bytes(urllib.request.urlopen(lock['patched_relocator']['url'],timeout=60).read())
  if sha(patch)!=lock['patched_relocator']['sha256']:raise ValueError('Relocator patch digest mismatch')
  run('cmake','-DMINHOOK_HOOK_C='+str(dest/'src/hook.c'),'-P',str(patch))
- if sha(dest/'src/trampoline.c')!=lock['patched_relocator']['output_sha256']:raise ValueError('Prepared baseline digest mismatch')
+ relocator=dest/'src/trampoline.c'
+ # Canonical C-source LF bytes are the pinned baseline identity on every host.
+ canonical=relocator.read_bytes().replace(b'\r\n',b'\n')
+ if hashlib.sha256(canonical).hexdigest()!=lock['patched_relocator']['output_sha256']:
+  raise ValueError('Prepared baseline digest mismatch: raw='+sha(relocator)+' canonical='+hashlib.sha256(canonical).hexdigest())
+ relocator.write_bytes(canonical)
  for path in sorted(prepared.rglob('*')):
   if path.is_file() and path.name!='inputs.json':receipt['files'][str(path.relative_to(ROOT))]=sha(path)
  (prepared/'inputs.json').write_text(json.dumps(receipt,indent=2)+'\n')
