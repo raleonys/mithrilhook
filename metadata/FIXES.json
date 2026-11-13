@@ -83,7 +83,7 @@
     },
     {
       "id": "F17",
-      "change": "Owned bounded x64 prefix unwind metadata with a separate chained jump-back runtime range",
+      "change": "Owned bounded x64 prefix unwind metadata with a synthetic prologue covering the complete jump-back",
       "origin": "MithrilHook x64 compatibility follow-up"
     },
     {

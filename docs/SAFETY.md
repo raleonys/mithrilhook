@@ -44,7 +44,7 @@ an unrecoverable failure.
 4. The decoder and relocated instruction forms are finite. The #363 changes
    improve specific RIP/EIP/VEX/relative cases, not all future ISA encodings.
 5. Supported version-1 x64 prefixes receive owned generated unwind metadata.
-   The jump-back is a separate chained fragment to avoid false tail-epilogue
+   The synthetic prologue covers the jump-back to avoid false tail-epilogue
    interpretation. Handler-bearing bodies outside the original prologue,
    chained/unknown source formats, nonleaf interior entries and undescribed
    body stack/frame changes remain unsupported. Unregistered source code must

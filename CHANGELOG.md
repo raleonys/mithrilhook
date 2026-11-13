@@ -3,7 +3,7 @@
 ## 0.1.0 development candidate
 
 - Register owned x64 unwind metadata for supported relocated prefixes, with a
-  separate chained jump-back fragment and an unchanged 64-byte code limit.
+  synthetic prologue covering the jump-back and an unchanged 64-byte code limit.
 - Keep runtime-table registry calls outside owned suspension windows; retain
   and recover registration/deletion/storage failures without losing owners.
 - Require all eleven pinned-runner targets to pass create/remove classification;

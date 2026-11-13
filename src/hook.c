@@ -1161,7 +1161,7 @@ static BOOL MapUnwindOffset(const TRAMPOLINE *ct, UINT offset, BYTE *mapped)
 #endif
 
 /* Describe only the operations actually present in the relocated prefix.
- * The jump-back is a separate chained fragment, marked wholly as a prologue;
+ * The synthetic prologue extends through the entire jump-back instruction/data;
  * otherwise Windows can mistake FF25 for an already-restored tail-call epilogue.
  * Language scopes and unknown/chained source formats remain unsupported. */
 static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
@@ -1266,25 +1266,13 @@ static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)
     if (ct->newSize == 0 || ct->codeSize < ct->newSize || ct->codeSize > MEMORY_CODE_SIZE)
         return FALSE;
     generated->info[0] = 1;
-    generated->info[1] = ct->newSize;
+    generated->info[1] = ct->codeSize;
     generated->info[2] = (BYTE)output;
     generated->info[3] = copiedFrame ? info[3] : 0;
     generated->functions[0].BeginAddress = 0;
-    generated->functions[0].EndAddress = ct->newSize;
+    generated->functions[0].EndAddress = ct->codeSize;
     generated->functions[0].UnwindData = MEMORY_CODE_SIZE + (DWORD)offsetof(MTH_UNWIND_STORAGE, info);
     generated->count = 1;
-    if (ct->codeSize != ct->newSize)
-    {
-        generated->jumpInfo[0] = 1 | (4 << 3); /* UNW_FLAG_CHAININFO. */
-        generated->jumpInfo[1] = ct->codeSize - ct->newSize;
-        generated->jumpInfo[2] = 0;
-        generated->jumpInfo[3] = generated->info[3];
-        memcpy(generated->jumpInfo + 4, &generated->functions[0], sizeof(RUNTIME_FUNCTION));
-        generated->functions[1].BeginAddress = ct->newSize;
-        generated->functions[1].EndAddress = ct->codeSize;
-        generated->functions[1].UnwindData = MEMORY_CODE_SIZE + (DWORD)offsetof(MTH_UNWIND_STORAGE, jumpInfo);
-        generated->count = 2;
-    }
 #else
     (void)ct;
 #endif

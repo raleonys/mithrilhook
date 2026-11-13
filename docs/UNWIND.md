@@ -24,8 +24,8 @@ leaf-unwindable. This is not arbitrary x64 exception-scope translation.
 ## Metadata layout and jump-back semantics
 
 X64 slots are 256 bytes. The executable code budget remains the original 64
-bytes; the remaining fixed-address storage holds up to two runtime entries,
-bounded unwind codes, a chained fragment and ownership state. Eleven hooks
+bytes; the remaining fixed-address storage holds a runtime entry,
+bounded unwind codes and ownership state. Eleven hooks
 still fit in one 4096-byte allocation. Win32 slot/code sizes are unchanged.
 
 Only unwind operations completed within the copied source span are retained.
@@ -34,10 +34,10 @@ the jump-back is not mistaken for a copied source instruction. Frame-register
 metadata is retained only if frame setup was actually copied. No registration
 is needed when the copied prefix remains leaf-unwindable.
 
-The main prefix is described as a synthetic prologue. Copied body instructions
+The complete main code range is described as a synthetic prologue. Copied body instructions
 are admitted only when their stack/frame state remains described by those
-operations. The absolute jump-back is a separate runtime range with a chained
-record and a prologue covering its entire instruction/data span. This prevents
+operations. The synthetic prologue extends through the absolute jump-back
+instruction and its data. This prevents
 Windows from mistaking FF25 for a tail-call epilogue with an already-restored
 stack. The relay, entered before the original prologue, remains leaf-unwindable.
 

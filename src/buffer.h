@@ -36,9 +36,8 @@
     #define MTH_UNWIND_CODE_SLOTS 64
     typedef struct _MTH_UNWIND_STORAGE
     {
-        RUNTIME_FUNCTION functions[2];
+        RUNTIME_FUNCTION functions[1];
         BYTE info[4 + MTH_UNWIND_CODE_SLOTS * 2];
-        BYTE jumpInfo[4 + sizeof(RUNTIME_FUNCTION)];
         DWORD count;
         BOOL registered;
         BOOL restorePending;

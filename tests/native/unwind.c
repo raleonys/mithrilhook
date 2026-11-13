@@ -58,7 +58,7 @@ static void frame_case(BYTE *code,RUNTIME_FUNCTION *source,UINT kind)
     context.Rsp=(DWORD64)(ULONG_PTR)(kind==2?stack+2:established?stack+4:stack);
     context.Rbp=established?(DWORD64)(ULONG_PTR)(stack+4):0x88776655;
     found=RtlLookupFunctionEntry(context.Rip,&base,NULL);
-    require(found!=NULL,"lookup chained frame-pointer jump-back range");
+    require(found!=NULL,"lookup synthetic frame-pointer jump-back range");
     (void)RtlVirtualUnwind(0,base,context.Rip,found,&context,&handler,&frame,NULL);
     require(context.Rip==stack[5]&&context.Rsp==(DWORD64)(ULONG_PTR)(stack+6)&&context.Rbp==stack[4],
         "frame established before/after prefix restores the exact caller frame");
@@ -105,7 +105,7 @@ static void saved_state_case(BYTE *code,RUNTIME_FUNCTION *source,UINT kind)
     memset(&context,0,sizeof(context));context.ContextFlags=CONTEXT_FULL;
     context.Rip=(DWORD64)(ULONG_PTR)((BYTE*)original+offset);context.Rsp=(DWORD64)(ULONG_PTR)stack;context.Rbx=0x55667788;
     found=RtlLookupFunctionEntry(context.Rip,&base,NULL);
-    require(found!=NULL,"lookup saved-state chained jump-back metadata");
+    require(found!=NULL,"lookup saved-state synthetic jump-back metadata");
     (void)RtlVirtualUnwind(0,base,context.Rip,found,&context,&handler,&frame,NULL);
     require(context.Rip==stack[returnIndex]&&context.Rsp==(DWORD64)(ULONG_PTR)(stack+returnIndex+1),"saved-state unwind restores the exact caller return and stack");
     if(category==0)require(context.Rbx==stack[4],"scaled/unscaled nonvolatile save restores RBX");

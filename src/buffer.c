@@ -90,7 +90,7 @@ static BOOL UnregisterSlotUnwind(LPVOID pBuffer)
             return FALSE;
         unwind->registered = FALSE;
         /* If memory release later fails, restore the published table before
-         * any suspended peer can resume into the retained trampoline. */
+         * the consumer may reopen admission to the retained trampoline. */
         unwind->restorePending = TRUE;
     }
 #else
