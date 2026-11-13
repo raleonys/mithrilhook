@@ -246,7 +246,7 @@ static UINT RipMemoryAccessSize(const HDE *hs)
     if (hs->p_seg == PREFIX_SEGMENT_FS || hs->p_seg == PREFIX_SEGMENT_GS)
         return MTH_RIP_UNKNOWN_SIZE;
     if (op == 0xFF && hs->modrm_reg == 6)
-        return hs->p_66 ? 2 : 8;
+        return hs->rex_w || !hs->p_66 ? 8 : 2; /* Effective REX.W overrides 66. */
     if (op == 0xFF && (hs->modrm_reg == 2 || hs->modrm_reg == 4) && !hs->p_66)
         return 8;
     if (op <= 0x3B && (op & 7) <= 3)

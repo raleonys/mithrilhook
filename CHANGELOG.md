@@ -1,120 +1,99 @@
-# MithrilHook development history
+# Changelog
 
-There is no published release or release tag. The CMake project version is
-0.1.0; the entries below describe development milestones, not stable releases.
+The first independent MithrilHook release is being prepared. No published tag
+or release is implied by this file. VERSION is the canonical distribution
+version; the CMake numeric component and Windows fixed version are 1.0.0.
 
-## Unreleased
+## [1.0.0-rc.1] — Release candidate, not yet published
 
-- Reserve complete normal/hotpatch write intervals at creation, including
-  disabled hooks; refuse intersecting owners before original publication.
-- Cover both creation/removal orders, individual/all/queued activation,
-  adjacent controls, disjoint alternate hotpatches and exact negative controls.
+### Added
 
-- Refuse a relocated x64 RIP-relative load or store of the five bytes the hook
-  jump overwrites. LEA and accesses completely outside that window keep the
-  absolute-address fixup; the adjusted trampoline is not used as a raw image.
-- Require a proven complete RIP access range, including 512-byte FXSAVE/FXRSTOR
-  operands. Refuse unknown/indexed/segment-dependent operands instead of
-  assuming a 64-byte limit, and exercise native publication and execution.
+- Independent Windows x86/x64 library identity: MithrilHook.h, the MTH_* API,
+  MithrilHook::mithrilhook CMake target and mithrilhook DLL. There are thirteen
+  public exports and no legacy compatibility aliases.
+- Strict peer preparation with owned handles, context validation, retryable
+  completion/cleanup and generated-code retirement checks. The core includes
+  the separately authorized SAFE-FREEZE work and the Citrine #362/#363 fixes.
+- Bounded generated version-2 x64 unwind metadata for supported registered
+  source prologues, with registry and storage ownership retained through
+  failures. Registry operations run outside owned peer-suspension windows.
+- A comparison of eight hook engines over 38 workloads and five Windows,
+  architecture and compiler environments. Immutable inputs, raw samples,
+  negative controls, binary receipts and recomputed statistics are retained.
+- Independent installed-package consumers across static/shared, Debug/Release,
+  MSVC/clang-cl and x64/Win32 builds, with actual hook/original/retirement calls.
+- A canonical VERSION file, full candidate version in package/DLL metadata,
+  Windows prerelease resource flags and versioned validation artifacts.
 
-- Resolve internal JMP/Jcc/LOOP destinations through the completed instruction
-  map so backward branches remain correct after an earlier Jcc expansion.
-- Refuse internal targets without a decoded instruction-boundary mapping;
-  retain plain-loop controls and conservative forward-span growth refusals.
-- Add complete native source/trampoline/detour/restore/retirement execution
-  cases and a portable prefix/opcode/target-layout matrix for review #13.
+### Fixed
 
-- Refuse copied CALL-next/get-PC idioms and unsupported x64 REX2/APX forms
-  before publication; explicitly document return-address-observation limits.
-- Keep ordinary CALL and legacy/REX byte-alias controls; add nonexecuting APX
-  refusal/publication cases and complete ordinary-CALL lifecycle coverage.
+- Correct single-disable peer IP mapping, repair peer IPs against physically
+  committed writes after partial failures, and retain failed cleanup owners.
+  Observe late peers after suspension; the final observation window remains
+  a documented host-coordination boundary. ([#1], [#3])
+- Check signed RIP displacement range, EIP wrapping, VEX/relative forms and
+  bounded instruction/padding reads. Use alignment-safe decoder accesses and
+  refuse same-thread recursive mutations. ([#1])
+- Register and retain supported nonleaf x64 trampoline metadata through cache,
+  registry and storage failures; cover the complete jump-back. ([#4])
+- Refuse ambiguous 66-prefixed near branches. Normalize byte-register aliases
+  before protected stack/frame checks, retaining valid unrelated writes. ([#9])
+- Refuse CALL-next address-discovery idioms and unsupported copied REX2/APX
+  forms before publication; keep ordinary supported CALL behavior. ([#12])
+- Resolve internal JMP/Jcc/LOOP targets through the completed instruction map,
+  including backward branches after expansion; refuse unmapped boundaries.
+  Preserve conservative forward-span growth refusals. ([#14])
+- Refuse RIP-relative accesses overlapping the hook patch. Require proven
+  access ranges, account for 512-byte FXSAVE/FXRSTOR operands, and refuse
+  unmodeled indexed/segment/vector forms. LEA remains address-only. ([#15])
+- Reserve complete normal/hotpatch write intervals even while disabled.
+  Refuse intersecting owners while preserving adjacent and disjoint alternate
+  hotpatch placements. ([#16])
+- Apply effective REX.W precedence over 66 when calculating PUSH memory width.
+  Cover prefix orders, both patch boundaries and genuine Windows generated
+  unwind/publication/retirement behavior. ([#17])
 
-- Refuse ambiguous 66-prefixed near CALL/JMP/Jcc forms before publishing a
-  trampoline; preserve ordinary unprefixed branch behavior.
-- Normalize AH/CH/DH/BH and REX byte destinations in the unwind-neutral filter,
-  preserving unrelated byte writes while rejecting protected frame changes.
+### Packaging and compatibility
 
-- Add a native comparison of eight engines with pinned source/adapter/binary
-  identities, 38 workloads, five OS/architecture/compiler environments, seven
-  paired rounds, steady concurrent callers and separate cold/warm lifecycle data.
-- Exercise the installed CMake package from a separate consumer in all seven
-  native configurations, including static/shared and Debug/Release CRT linkage.
-- Add 29 source-form compatibility cases per engine, real generated-unwind
-  observations, broader eleven-API create/remove coverage, exact corrupted-call
-  controls and offline recomputation of retained raw evidence.
-- Preserve the historical donor benchmark's own source identity and distinguish
-  m417z MinHook from MinHook-Detours. Library stable publication can precede
-  Citrine integration after independent library release gates are met.
+- The installed package exposes the full 1.0.0-rc.1 version. Numeric versioned
+  requests require explicit MithrilHook_ALLOW_PRERELEASE consent for candidates;
+  unversioned discovery is also available. Static/shared consumers retain their
+  matching MSVC runtime configuration.
+- Distribution remains GPL-3.0-only. Original MinHook/HDE BSD notices and the
+  separately authorized SAFE-FREEZE notice remain intact; these are not three
+  alternative licenses for the full fork. Branding and the approved logo are
+  preserved. ([#2])
+- Supported instruction and unwind forms are finite. Generated nonleaf metadata
+  requires Windows 10 or later; unknown/chained formats and untranslated
+  handler-bearing bodies remain refused. Multi-hook writes remain sequential.
 
-## Merged development milestones
+### Validation and release boundary
 
-### Evidence and open-work documentation — [PR #5](https://github.com/raleonys/mithrilhook/pull/5)
+Exact revisions, configurations and completed runs are recorded in
+[Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
+candidate PR [#17]. Earlier results keep their original source identities.
+Library publication is owner-controlled after the candidate's correctness,
+package, performance and source/license review. Citrine integration and actual
+application/game lifecycle acceptance are the following engineering phase.
 
-- Correct stale unmerged/native-pending wording and link exact source revisions
-  to their completed Windows validation.
-- Separate the refusal-only unwind audit from the later generated-metadata
-  implementation so historical behavior is not presented as the current core.
-- Record the missing comparative hook benchmark evidence and distinguish
-  remaining acceptance work from documented engineering boundaries.
+## Development history before the first release
 
-### Owned x64 trampoline unwind metadata — [PR #4](https://github.com/raleonys/mithrilhook/pull/4)
+The earlier 0.1.0 CMake identifier represented unpublished development work,
+not a prior stable release. The initial independent core, branding, thread/batch
+review, generated unwind support and evidence audit were developed in PRs
+[#1], [#2], [#3], [#4] and [#5]. Benchmark/package infrastructure was merged in
+[#6]; subsequent reviewed corrections are grouped above by resulting behavior.
+Report-only review PRs are not counted as additional software releases.
 
-- Restore create/remove support for all eleven observed application targets on
-  the pinned x64 Windows runner; Win32 also accepts all eleven. The production
-  probe now fails on any refusal. These probes do not enable or execute the
-  actual Windows API targets.
-- Generate bounded version-2 runtime metadata for supported version-1 source
-  prefixes on Windows 10 and later. Cover the complete jump-back so Windows
-  does not misclassify FF25 as an already-restored tail epilogue. Older or
-  unknown systems retain strict refusal when nonleaf metadata is needed.
-- Keep the executable code budget at 64 bytes within fixed-address 256-byte
-  x64 slots. Register metadata and flush generated code before publication.
-- Retain exact owners after registration, deletion, publication cleanup or
-  memory-release rollback failures. Retry registry operations outside owned
-  suspension windows, under the consumer's closed-admission/drain protocol.
-- Add genuine virtual-unwind and owned-code execution cases, native registry
-  failure cases with projected peers, and older/unknown OS refusal controls.
-- Refresh generated negative controls when their source or inventory changes.
-- Complete 146 native test executions and two portable ASan/UBSan tests at the
-  PR head and merged master. Exact revisions and runs are in
-  [Validation](docs/VALIDATION.md).
-
-### Thread coverage and partial-batch audit — [PR #3](https://github.com/raleonys/mithrilhook/pull/3)
-
-- Reconcile suspended peer IPs against physically committed hook transitions
-  after preparation or partial-batch failures; retain failed repairs for retry.
-- Recheck live peer coverage after suspension and refuse an observed late birth
-  before patching or retiring generated code. The final observation window
-  remains a documented consumer-coordination boundary.
-- Introduce conservative x64 unwind refusal and exact reconciliation, coverage
-  and missing-metadata controls. This historical guard accepted only 3/11 x64
-  targets and was superseded by PR #4's bounded generated-metadata support.
-- Apply the approved five-pixel logo alignment without regenerating the artwork.
-
-### Branding and license clarification — [PR #2](https://github.com/raleonys/mithrilhook/pull/2)
-
-- Include the approved MithrilHook logo in the README and installed package,
-  and document its visual identity.
-- Distinguish the GPL-3.0-only distribution license from retained third-party
-  BSD notices and provenance.
-
-### Independent strict core — [PR #1](https://github.com/raleonys/mithrilhook/pull/1)
-
-- Establish the independent MTH API, MithrilHook package/DLL identity and CMake
-  target; remove the legacy compatibility header and inherited build products.
-- Integrate strict SAFE-FREEZE, all five mutation cleanup barriers, correct
-  disable IP relocation, completion journaling, cache publication checks and
-  retryable generated-code/buffer/heap retirement.
-- Integrate Citrine PR #363 bounded code reads, signed RIP displacement checks,
-  EIP wrapping and VEX/relative-instruction classification fixes.
-- Replace unaligned multi-byte decoder loads and displacement stores with
-  memcpy-based access; add alignment regressions.
-- Reject guarded/nonaccessible target and detour regions before hook allocation.
-- Add same-thread reentry detection and diagnostics without a recursive lock.
-- Retain injected-failure, real-peer, leaf-call, retirement and cleanup controls
-  and add a reproducible source inventory.
-- Validate feature branches through pull requests and reserve push validation
-  for main branches, avoiding duplicate checks for the same PR commit.
-
-Comparative performance and application/game acceptance remain open; see
-[Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
+[#1]: https://github.com/raleonys/mithrilhook/pull/1
+[#2]: https://github.com/raleonys/mithrilhook/pull/2
+[#3]: https://github.com/raleonys/mithrilhook/pull/3
+[#4]: https://github.com/raleonys/mithrilhook/pull/4
+[#5]: https://github.com/raleonys/mithrilhook/pull/5
+[#6]: https://github.com/raleonys/mithrilhook/pull/6
+[#9]: https://github.com/raleonys/mithrilhook/pull/9
+[#12]: https://github.com/raleonys/mithrilhook/pull/12
+[#14]: https://github.com/raleonys/mithrilhook/pull/14
+[#15]: https://github.com/raleonys/mithrilhook/pull/15
+[#16]: https://github.com/raleonys/mithrilhook/pull/16
+[#17]: https://github.com/raleonys/mithrilhook/pull/17

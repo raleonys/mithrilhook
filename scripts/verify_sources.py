@@ -21,6 +21,10 @@ def verify():
  expected=json.loads((ROOT/MANIFEST).read_text())['files'];actual=members()
  changes=[name for name in sorted(expected.keys()|actual.keys()) if expected.get(name)!=actual.get(name)]
  if changes:raise ValueError('Source inventory mismatch: '+', '.join(changes))
+ version=(ROOT/'VERSION').read_text().strip()
+ if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?',version):raise ValueError('Invalid distribution VERSION')
+ if f'## [{version}]' not in (ROOT/'CHANGELOG.md').read_text():raise ValueError('Current version missing from changelog')
+ if version not in (ROOT/'README.md').read_text():raise ValueError('Current version missing from README')
  header=(ROOT/'include/MithrilHook.h').read_text()
  declarations=set(re.findall(r'WINAPI\s+(MTH_\w+)\s*\(',header))
  exports=set(re.findall(r'\bMTH_\w+\b',(ROOT/'dll_resources/MithrilHook.def').read_text()))
@@ -31,7 +35,7 @@ def verify():
   if re.search(r'\bMH_\w+|\bMINHOOK_\w+',source):raise ValueError('Legacy active identifier: '+str(path))
  if '#if defined(MTH_SAFE_FREEZE)' in (ROOT/'src/hook.c').read_text():
   raise ValueError('Production core must not retain an optional weaker engine')
- print(f'PASS: {len(actual)} source files, {len(exports)} MTH exports, strict-only core and no legacy API aliases')
+ print(f'PASS: {len(actual)} source files, {len(exports)} MTH exports, {version}, strict-only core and no legacy API aliases')
 def main():
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--refresh',action='store_true');args=parser.parse_args()
  if args.refresh:

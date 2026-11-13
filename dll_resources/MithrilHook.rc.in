@@ -3,9 +3,9 @@
  PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
- FILEFLAGS 0x1L
+ FILEFLAGS (0x1L | @MITHRILHOOK_RESOURCE_FLAGS@L)
 #else
- FILEFLAGS 0x0L
+ FILEFLAGS @MITHRILHOOK_RESOURCE_FLAGS@L
 #endif
  FILEOS 0x4L
  FILETYPE 0x2L
@@ -17,11 +17,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "MithrilHook contributors"
             VALUE "FileDescription", "MithrilHook - checked Windows function hooks"
-            VALUE "FileVersion", "@PROJECT_VERSION@.0"
+            VALUE "FileVersion", "@MITHRILHOOK_VERSION@"
             VALUE "InternalName", "mithrilhook"
             VALUE "LegalCopyright", "MinHook: Tsuda Kageyu; SAFE-FREEZE: Brownfield contributors; MithrilHook contributors. See distributed licenses."
             VALUE "ProductName", "MithrilHook"
-            VALUE "ProductVersion", "@PROJECT_VERSION@.0"
+            VALUE "ProductVersion", "@MITHRILHOOK_VERSION@"
         END
     END
     BLOCK "VarFileInfo"

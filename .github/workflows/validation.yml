@@ -36,6 +36,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Read distribution version
+        shell: python
+        run: |
+          import os,re
+          from pathlib import Path
+          version=Path('VERSION').read_text().strip()
+          assert re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?',version)
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as output:
+              output.write('MTH_DISTRIBUTION_VERSION='+version+'\n')
       - run: python scripts/verify_sources.py
       - run: cmake -S . -B build/native -A ${{ matrix.arch }} -T ${{ matrix.toolset }} -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DBUILD_TESTING=ON
       - run: cmake --build build/native --config ${{ matrix.config }} --parallel 2
@@ -57,7 +66,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: MithrilHook-${{ matrix.arch }}-${{ matrix.config }}-${{ matrix.toolset }}-shared-${{ matrix.shared }}
+          name: MithrilHook-${{ env.MTH_DISTRIBUTION_VERSION }}-${{ matrix.arch }}-${{ matrix.config }}-${{ matrix.toolset }}-shared-${{ matrix.shared }}
           path: |
             build/native/native.xml
             build/native/Testing/Temporary/LastTest.log

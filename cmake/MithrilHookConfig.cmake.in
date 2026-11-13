@@ -1,3 +1,6 @@
 @PACKAGE_INIT@
+set(MithrilHook_VERSION "@MITHRILHOOK_VERSION@")
+set(MithrilHook_VERSION_NUMERIC "@PROJECT_VERSION@")
+set(MithrilHook_PRERELEASE "@MITHRILHOOK_PRERELEASE@")
 include("${CMAKE_CURRENT_LIST_DIR}/MithrilHookTargets.cmake")
 check_required_components(MithrilHook)

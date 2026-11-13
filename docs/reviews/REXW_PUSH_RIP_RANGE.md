@@ -89,5 +89,8 @@ PUSH r/m64 controls, overlap at both range boundaries, source/original results,
 unchanged refusal outputs, generated unwind registration, genuine Windows
 virtual unwind and complete publication/retirement cleanup.
 
-Implementation and native Windows validation remain pending. This PR changes
-only this report and its source-inventory entry.
+The historical finding above is preserved. This PR now also corrects effective
+REX.W precedence and adds prefix-order/range controls plus genuine Windows
+source/generated metadata lookup, virtual unwind, execution and retirement
+checks. Exact candidate revisions and completed runs are recorded in the PR
+description; the original projected-API evidence is not relabeled as native.

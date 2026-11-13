@@ -56,6 +56,10 @@ even if the nominal RIP address is outside the patch. FXSAVE/FXRSTOR use their
 not a raw copy of the stolen bytes, so the operand is refused rather than
 silently retargeted into it.
 
+For RIP-relative PUSH, effective REX.W selects an eight-byte read even when 66
+is also present; otherwise 66 selects two bytes and the x64 default is eight.
+REX prefixes superseded by a later legacy prefix do not retain their W effect.
+
 MTH_ALL_HOOKS selects the owned set for the documented enable/disable/queue
 operations. Removal remains target-specific; uninitialize retires the complete
 engine after the required quiescence. An already initialized engine must not be

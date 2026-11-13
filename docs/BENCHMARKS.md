@@ -20,17 +20,34 @@ MinHook-Detours, nor call-through latency. Its original safety/workload limits
 remain; values are not transferred to the new fork. Citrine's runtime-load
 benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
+## Completed runs and current candidate
+
+- Broad #12-era source `f1f32266b5d0392a830269ef9c5894099126d60e`,
+  [43477964529](https://github.com/raleonys/mithrilhook/actions/runs/43477964529):
+  all five environments passed, 10,640 positive children. This predates
+  #14/#15/#16/#17 and is not a performance measurement of the release candidate.
+- Focused pre-#9 / #9 / #12 comparison, source
+  `fa80d956ebc4cad0a8d3eb4bd27757f35ffb8355`,
+  [43476882976](https://github.com/raleonys/mithrilhook/actions/runs/43476882976):
+  three environments, five workloads, twenty paired rounds, 900 positive
+  children. The isolated runner is retained on perf/review9-ab; that experiment
+  branch changes its CI workflow and is not a production merge target.
+- The 1.0.0-rc.1 candidate's exact-head broad run is tracked in
+  [PR #17](https://github.com/raleonys/mithrilhook/pull/17). Cite its completed
+  run and artifacts for the PUSH correction and candidate version.
+
 ## Immutable candidates and build context
 
 `metadata/BENCHMARK_SOURCES.json` pins seven external repositories and the exact
-Citrine relocation patch/output hash. The MithrilHook candidate is the current
-benchmark head, including the reviewed branch/byte-alias corrections from PR #9.
+Citrine relocation patch/output hash. The MithrilHook candidate is the exact committed benchmark head. Its
+corrections and version are determined by that source manifest, not by a moving
+branch name.
 Every executable has a source/input/binary receipt; adapters are separate from
 production and keep each engine's actual API semantics.
 
 | Candidate | Selected input | Adapter contract |
 | --- | --- | --- |
-| MithrilHook | Benchmark source head; core corrections from `614be3d3f1971e508798be21badc5681d391a99a` | Strict automatic observation, physical-state repair and retryable retirement ownership |
+| MithrilHook | Exact committed benchmark source head | Strict automatic observation, physical-state repair and retryable retirement ownership |
 | Official MinHook | `TsudaKageyu/minhook` at `8af6b4acae5a9388fd742b56fa79ece89d96f823` | Original/default freeze; separate create/enable/remove |
 | Official MinHook current stable | `TsudaKageyu/minhook` v1.3.4 at `c3fcafdc10146beb5919319d0683e44e3c30d537` | Current official original/default freeze; separate create/enable/remove |
 | Patched predecessor | `cyanoleon/minhook` at `311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38`, strict ON, plus exact Citrine #363 relocator output | SAFE-FREEZE completion/retirement ownership; original MH API |
