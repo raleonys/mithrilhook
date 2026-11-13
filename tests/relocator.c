@@ -120,6 +120,43 @@ static void internal_branch_cases(BYTE *source, BYTE *trampoline)
     }
 }
 
+static void rip_patch_cases(BYTE *source, BYTE *trampoline)
+{
+    static const struct { BYTE bytes[16]; UINT length; BOOL accepted; } cases[] = {
+        {{0x48,0x0f,0xa3,0x0d,56,0,0,0,0xc3},9,FALSE}, /* BT with register bit index. */
+        {{0x48,0x0f,0xab,0x0d,56,0,0,0,0xc3},9,FALSE},
+        {{0x48,0x0f,0xb3,0x0d,56,0,0,0,0xc3},9,FALSE},
+        {{0x48,0x0f,0xbb,0x0d,56,0,0,0,0xc3},9,FALSE},
+        {{0x0f,0xae,0x05,0x79,0xff,0xff,0xff,0xc3},8,FALSE}, /* FXSAVE source-128, size 512. */
+        {{0x0f,0xae,0x0d,0x79,0xff,0xff,0xff,0xc3},8,FALSE},
+        {{0x0f,0xae,0x25,57,0,0,0,0xc3},8,FALSE}, /* Variable-sized XSAVE. */
+        {{0x64,0x8b,0x05,57,0,0,0,0xc3},8,FALSE},
+        {{0x65,0x8b,0x05,57,0,0,0,0xc3},8,FALSE},
+        {{0xc5,0xf9,0x6f,0x05,56,0,0,0,0xc3},9,FALSE},
+        {{0x8f,0xe9,0x78,0x92,0x05,55,0,0,0,0xc3},10,FALSE}, /* XOP, not legacy POP. */
+        {{0x66,0x8b,0x05,0xf8,0xff,0xff,0xff,0xc3},8,FALSE}, /* Word partly overlaps. */
+        {{0x8b,0x05,0xf7,0xff,0xff,0xff,0xc3},7,FALSE},
+        {{0x89,0x05,0xfa,0xff,0xff,0xff,0xc3},7,FALSE},
+        {{0x0f,0xb6,0x05,0xf8,0xff,0xff,0xff,0xc3},8,TRUE}, /* Byte ends at patch start. */
+        {{0x8b,0x05,0xf6,0xff,0xff,0xff,0xc3},7,TRUE}, /* Dword ends at patch start. */
+        {{0x0f,0xb6,0x05,0xfe,0xff,0xff,0xff,0xc3},8,TRUE}, /* Starts at patch end. */
+        {{0x64,0x48,0x8d,0x05,0xf8,0xff,0xff,0xff,0xc3},9,TRUE},
+        {{0x65,0x48,0x8d,0x05,0xf8,0xff,0xff,0xff,0xc3},9,TRUE},
+        {{0x0f,0x1f,0x05,0xf9,0xff,0xff,0xff,0xc3},8,TRUE},
+        {{0x0f,0xae,0x05,0xf9,0xfd,0xff,0xff,0xc3},8,TRUE}, /* 512-byte range ends at entry. */
+        {{0x0f,0xae,0x05,57,0,0,0,0xc3},8,TRUE}
+    };
+    UINT index;
+    for (index = 0; index < sizeof(cases)/sizeof(cases[0]); ++index)
+    {
+        TRAMPOLINE ct;
+        memset(source,0x90,128); memcpy(source,cases[index].bytes,cases[index].length);
+        memset(&ct,0,sizeof(ct)); ct.pTarget=source; ct.pTrampoline=trampoline; ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct)==cases[index].accepted,
+            "RIP access requires a proven range; indexed, unknown and segment-dependent forms refuse");
+    }
+}
+
 int main(void)
 {
     SYSTEM_INFO info;
@@ -148,6 +185,25 @@ int main(void)
     memcpy(&relocated,code+515,4);
     check((INT64)(code+519)+relocated==(INT64)(code+71)+displacement,
         "retain the exact RIP-relative effective address");
+    {
+        const BYTE self[] = {0x8B,0x05,0xFA,0xFF,0xFF,0xFF,0xC3};
+        const BYTE overlap[] = {0x8B,0x05,0xF9,0xFF,0xFF,0xFF,0xC3};
+        const BYTE lea[] = {0x48,0x8D,0x05,0xF9,0xFF,0xFF,0xFF,0xC3};
+        const BYTE outside[] = {0x8B,0x05,0x01,0x00,0x00,0x00,0xC3,0x2A,0x00,0x00,0x00};
+        memset(code + 64, 0x90, 64);
+        memcpy(code + 64, self, sizeof(self));
+        check(!MthInternal_CreateTrampolineFunction(&ct),
+            "refuse a RIP-relative load of the bytes the hook jump will overwrite");
+        memcpy(code + 64, overlap, sizeof(overlap));
+        check(!MthInternal_CreateTrampolineFunction(&ct),
+            "refuse a RIP-relative load that only partly covers the hook patch");
+        memcpy(code + 64, lea, sizeof(lea));
+        check(MthInternal_CreateTrampolineFunction(&ct),
+            "LEA of the patched entry keeps the address and remains publishable");
+        memcpy(code + 64, outside, sizeof(outside));
+        check(MthInternal_CreateTrampolineFunction(&ct),
+            "RIP-relative load completely outside the hook patch remains publishable");
+    }
     memcpy(code+64,vex,sizeof vex);
     check(MthInternal_CreateTrampolineFunction(&ct), "accept VPMASKMOVD memory load");
     check(ct.oldSize==5, "five-byte source prefix remains five bytes after jump-back emission");
@@ -155,6 +211,7 @@ int main(void)
     memcpy(code+64,xbegin,sizeof xbegin);
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");
     internal_branch_cases(code + 64, code + 512);
+    rip_patch_cases(code + 1024, code + 512);
     {
         const BYTE load[]={0x48,0x8b,0x44,0x24,0x60};
         const BYTE stack[]={0x48,0x83,0xec,0x38};
