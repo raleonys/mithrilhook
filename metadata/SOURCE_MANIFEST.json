@@ -9,7 +9,7 @@
     ".gitignore": "7cc3ef49b14a18cfa344778ed57040434344267b6a4e0aba37168be4ced4f6d8",
     "AGENTS.md": "dd27dd526289fa011ac9d6d942c4635dd3798a8c8331452ab55c657c6d1cff11",
     "AUTHORS.txt": "073b4e8b0a5a0cd9f4dfa838369f4fc7a4f47151d930b4e1fd891644060a897f",
-    "CHANGELOG.md": "75920e5478d4d20fb591417cb56045a445a55470bac9b102842a6195e52045d2",
+    "CHANGELOG.md": "04459fe53173e4528ef2c8ccd299ea836dd0245507f455a6251c7a4cdba94d79",
     "CMakeLists.txt": "64e233e5e2ec08580d1de266c57304c9af5f2f0945de656027432784ec373b67",
     "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
     "LICENSE.SAFE_FREEZE": "a481b39c55ae006affc1236284bc888be0d4eefd9447a181ddaa0ef914e1b0e1",
@@ -29,7 +29,7 @@
     "cmake/MithrilHookConfig.cmake.in": "b45da5103edd78dd664bbe60eb874688b537491cfd031df957169552f4cc4c6b",
     "dll_resources/MithrilHook.def": "ea0e4bccf63b722cc2b21cc00211798da97107544dee22e0a8822fcae0abd1b2",
     "dll_resources/MithrilHook.rc.in": "fc9ce6fa20ed49fe7a08325927f02ee52d69b3f817d4b598343ac5c0cf844e17",
-    "docs/API.md": "1c4939b293b3dddf3d0d2faa87baa4a96589f0f110993909b8b20f9e8a1f96f4",
+    "docs/API.md": "24255454d656a529c2e73f4e0fe492b1c804ed76425fdd50688ef5ceb8b497d3",
     "docs/BENCHMARKS.md": "43ad6df1444a98ab1e0b6c5cd466700a5f33f99f0fe5a1e42a77b1340ea6b273",
     "docs/BRANDING.md": "9d5729fd66e371b1051d8d67b2481a4f00cacb18cddf2c56c94f7e4a7edd5136",
     "docs/REMAINING_WORK.md": "e06271f3994c3aed1a63b65aa523c547aa5dde9e71c1703b8db14e88d6464758",
@@ -60,9 +60,9 @@
     "src/hde/table32.h": "b65c46094b4a1c4e8e7b02eb3241b714b3a0268151b5b332e3f5e7c98ebd2c38",
     "src/hde/table64.h": "57d2d598a594a12cb7e975c01892bc4918c7b8107f7a55d5379a9825a465d956",
     "src/hook.c": "478584f979eddc704ee564136741f63f3e0ccee9c4ccd231b70de3178399e1be",
-    "src/trampoline.c": "ac6eab94135bad14135df54baf72034bfc17963c80d161bf3e0b6da2b09a8620",
+    "src/trampoline.c": "beecaf888bc073d4dd8db6acc4b2f67aa18ba183f7f35ebe0bd3633a1db56924",
     "src/trampoline.h": "bc436e798fb05616a3b72e3992212434dce213694fa6f8b19090043a1c35ddff",
-    "tests/CMakeLists.txt": "17a5a5bfe25762e9a6d4ab9cea9e7158efa04aa6d69694960ae0f58aa1c6e9ea",
+    "tests/CMakeLists.txt": "2c52c071348b6825a34330804ecda5e7e736f8b0bcd4df81ec8bd736f382359c",
     "tests/churn.c": "cc0848f2b3ce7e67e3b0778fb6419928c65c93da179ceaa1c6a7a484349ce4ae",
     "tests/cleanup.c": "85dbf4d1cf3b3233cdcc8f14a5f12620adebbedfa8ca2eb4e38bcbf1f57b849a",
     "tests/decoder.c": "d55e2a796cac0bcb2279eac5470567991c27635a241e5d24969633034c5b238a",
@@ -73,6 +73,7 @@
     "tests/native/prefixed_branches.c": "c9445f996bf7e1e6f823784437a67872a97c88e9e4fce0ccc6d0b4c3e4b5cd02",
     "tests/native/real_peer.cpp": "b6f28ded82f784235cdc7f44f8d9ed7c4d31c6bf1a7271d5c19612aa033a1345",
     "tests/native/retirement_peer.cpp": "0ad107857f8a55788c6224feb233ed68010fbebe16c86f2e527d9a43062e6e84",
+    "tests/native/rip_patch.c": "34e94eed3a741824f37896cd500ae89aa53ba89ee078f30e3c8c03ef59f9f97f",
     "tests/native/target_probe.c": "5700c238764ddaef7b9fe26b3f613745013fe4b0021850254331a749f2814089",
     "tests/native/unwind.c": "fb97596701182340a7bcbd386573f0cb5a191b5fb4d0128a5c46d27204e7b3ab",
     "tests/native/unwind_failures.c": "7dda6a4971819b624791525352d53a8cabb4421d3fa3ea594ec4428eaafd2ed9",
@@ -81,6 +82,6 @@
     "tests/portable/windows.h": "6a60cb103cf8d52e2de54fed1be79d5e2ca09822d0fca54344ffc80cab89345a",
     "tests/portable/windows_stub.c": "f7130ec7de367d75ff5102dfce592a5020ae61f3eca159fbc18030f6127af2e1",
     "tests/reentry.c": "e95b6a109d63142a605b8c01d7805b7ce96fda39f80b008a4e4c57d59a02a0d0",
-    "tests/relocator.c": "abd93d7818ac528bb07f8be849312e19cea2c508dcd426a92f8344974243a9d0"
+    "tests/relocator.c": "72313b0ad5a919f5df4e5068514104dcc50bbfca8bc60b01fa804bb9a2e758df"
   }
 }

@@ -233,25 +233,28 @@ BOOL MthInternal_IsUnwindNeutralInstruction(LPCVOID address, UINT length, UINT f
 }
 
 #if defined(_M_X64) || defined(__x86_64__)
-/* 0 means this ModR/M form does not read or write memory (LEA, multi-byte NOP).
- * Unrecognized memory forms use 64 bytes so a possible overlap with the
- * overwritten entry is refused instead of published. */
+#define MTH_RIP_UNKNOWN_SIZE ((UINT)-1)
+/* 0 means no memory access. Unknown widths, indexed bit strings, vector/XOP
+ * forms and segment-dependent linear addresses require refusal; a nominal
+ * 64-byte envelope does not bound all of these instructions. */
 static UINT RipMemoryAccessSize(const HDE *hs)
 {
     UINT op = hs->opcode;
 
     if (op == 0x8D || (op == 0x0F && hs->opcode2 == 0x1F))
         return 0;
-    if (op == 0xFF && (hs->modrm_reg == 2 || hs->modrm_reg == 4 || hs->modrm_reg == 6))
+    if (hs->p_seg == PREFIX_SEGMENT_FS || hs->p_seg == PREFIX_SEGMENT_GS)
+        return MTH_RIP_UNKNOWN_SIZE;
+    if (op == 0xFF && hs->modrm_reg == 6)
+        return hs->p_66 ? 2 : 8;
+    if (op == 0xFF && (hs->modrm_reg == 2 || hs->modrm_reg == 4) && !hs->p_66)
         return 8;
-    if (op == 0x8F && hs->modrm_reg == 0)
-        return hs->rex_w || !hs->p_66 ? 8 : 2;
     if (op <= 0x3B && (op & 7) <= 3)
         return (op & 1) == 0 ? 1 : (hs->rex_w ? 8 : (hs->p_66 ? 2 : 4));
-    if (op == 0x80 || op == 0x82 || op == 0x86 || op == 0x88 || op == 0x8A ||
+    if (op == 0x80 || op == 0x82 || op == 0x84 || op == 0x86 || op == 0x88 || op == 0x8A ||
         op == 0xC6 || op == 0xF6 || op == 0xFE)
         return 1;
-    if (op == 0x81 || op == 0x83 || op == 0x87 || op == 0x89 || op == 0x8B ||
+    if (op == 0x81 || op == 0x83 || op == 0x85 || op == 0x87 || op == 0x89 || op == 0x8B ||
         op == 0xC7 || op == 0xF7)
         return hs->rex_w ? 8 : (hs->p_66 ? 2 : 4);
     if (op == 0x0F && (hs->opcode2 == 0xB6 || hs->opcode2 == 0xBE))
@@ -262,16 +265,20 @@ static UINT RipMemoryAccessSize(const HDE *hs)
         return 4;
     if (op == 0x0F && hs->p_rep == 0xF2 && (hs->opcode2 == 0x10 || hs->opcode2 == 0x11))
         return 8;
-    return 64;
+    if (op == 0x0F && !hs->p_rep && hs->opcode2 == 0xAE && hs->modrm_reg <= 1)
+        return 512; /* FXSAVE/FXRSTOR, including the REX.W format. */
+    return MTH_RIP_UNKNOWN_SIZE;
 }
 
 static BOOL MemoryAccessHitsHookPatch(ULONG_PTR target, ULONG_PTR address, UINT size)
 {
     if (size == 0)
         return FALSE;
+    if (size == MTH_RIP_UNKNOWN_SIZE)
+        return TRUE;
     if (size > ~(ULONG_PTR)0 - address)
         return TRUE;
-    return address < target + sizeof(JMP_REL) && address + size > target;
+    return address >= target ? address - target < sizeof(JMP_REL) : target - address < size;
 }
 #endif
 

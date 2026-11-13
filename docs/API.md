@@ -48,7 +48,11 @@ bytes of the target returns MTH_ERROR_UNSUPPORTED_FUNCTION before publication.
 Those bytes are replaced by the hook jump, so keeping the original absolute
 address would observe the jump instead of the original value. LEA does not
 access that memory and remains supported. Accesses completely outside the
-five-byte window keep the existing absolute-address fixup. The trampoline is
+five-byte window keep the existing absolute-address fixup when their complete
+access range is known. Register-indexed bit strings, variable/unknown widths,
+unmodeled vector/XOP operands and FS/GS-dependent linear addresses are refused
+even if the nominal RIP address is outside the patch. FXSAVE/FXRSTOR use their
+512-byte envelope. LEA ignores FS/GS and remains supported. The trampoline is
 not a raw copy of the stolen bytes, so the operand is refused rather than
 silently retargeted into it.
 
