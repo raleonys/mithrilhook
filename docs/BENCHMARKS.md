@@ -1,69 +1,153 @@
-# Comparative hook-engine benchmarks
+# Native hook-engine comparison
 
-## Current evidence
+## Evidence and historical results
 
-No reproducible comparative hook-performance suite or timing result is retained
-in this repository. The inspected predecessor checkout, donor repository tree,
-and related Citrine benchmark documentation do not supply a performance result
-for the current MithrilHook runtime source. Performance ranking is therefore
-**NOT MEASURED**, and no speed or overhead advantage is claimed.
+The suite under `benchmarks/` produces native Windows results for an identified
+source/build, with raw samples and an offline auditor. Reports are retained in
+[Native hook-engine benchmarks](https://github.com/raleonys/mithrilhook/actions/workflows/benchmarks.yml)
+artifacts and linked from the implementation PR. Cite a completed run and its
+exact head/artifact digest; this protocol alone is not a performance result or
+a universal engine ranking. Correctness-test durations are not benchmarks.
 
-The 146 native CTest executions measure correctness contracts. CTest durations
-are not calibrated operation timings. The eleven-target probe and its
-guard-removed control measure support/refusal and owner cleanup, not latency,
-throughput, CPU cost or memory consumption. Citrine's runtime-load benchmark
-explicitly uses `install_hooks=false`; its XML/network/worker results cannot
-rank hook engines.
+A historical SAFE-FREEZE report is retained at
+[BENCHMARK_RESULTS.md](https://github.com/cyanoleon/minhook/blob/311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38/BENCHMARK_RESULTS.md),
+for code `a29eaa2aaa6e7eb8e4875c239d9ca861130d4b2a` and
+[run 43374271934](https://github.com/cyanoleon/minhook/actions/runs/43374271934).
+The earlier documentation audit missed this historical file. It compares the
+old strict core, official MinHook and `m417z/minhook` modes. It does not measure
+current MithrilHook bytes, Microsoft Detours, standalone SlimDetours or
+MinHook-Detours, nor call-through latency. Its original safety/workload limits
+remain; values are not transferred to the new fork. Citrine's runtime-load
+benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
-## Comparison candidates
+## Immutable candidates and build context
 
-These are candidates for a future comparison, not measured or performance-ranked
-engines. Record a reviewed immutable source revision for each before running.
+`metadata/BENCHMARK_SOURCES.json` pins seven external repositories and the exact
+Citrine relocation patch/output hash. The MithrilHook candidate is the current
+benchmark head, including the reviewed branch/byte-alias corrections from PR #9.
+Every executable has a source/input/binary receipt; adapters are separate from
+production and keep each engine's actual API semantics.
 
-| Candidate | Source identity | Performance status |
+| Candidate | Selected input | Adapter contract |
 | --- | --- | --- |
-| MithrilHook | [raleonys/mithrilhook](https://github.com/raleonys/mithrilhook), merged runtime `d32fd189f1459e6f7b70002d1483ada78342f055` | NOT MEASURED |
-| Official MinHook | [TsudaKageyu/minhook](https://github.com/TsudaKageyu/minhook); inherited base in `metadata/PROVENANCE.json` | NOT MEASURED |
-| Patched SAFE-FREEZE/Citrine predecessor | Exact donor and relocation inputs in `metadata/PROVENANCE.json`; choose and retain the complete built baseline | NOT MEASURED |
-| Microsoft Detours | [microsoft/Detours](https://github.com/microsoft/Detours) | NOT MEASURED |
-| KNSoft SlimDetours | [KNSoft/KNSoft.SlimDetours](https://github.com/KNSoft/KNSoft.SlimDetours) | NOT MEASURED |
-| MinHook-Detours | [m417z/minhook-detours](https://github.com/m417z/minhook-detours) | NOT MEASURED |
+| MithrilHook | Benchmark source head; core corrections from `614be3d3f1971e508798be21badc5681d391a99a` | Strict automatic observation, physical-state repair and retryable retirement ownership |
+| Official MinHook | `TsudaKageyu/minhook` at `8af6b4acae5a9388fd742b56fa79ece89d96f823` | Original/default freeze; separate create/enable/remove |
+| Official MinHook current stable | `TsudaKageyu/minhook` v1.3.4 at `c3fcafdc10146beb5919319d0683e44e3c30d537` | Current official original/default freeze; separate create/enable/remove |
+| Patched predecessor | `cyanoleon/minhook` at `311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38`, strict ON, plus exact Citrine #363 relocator output | SAFE-FREEZE completion/retirement ownership; original MH API |
+| m417z MinHook | `m417z/minhook` at `4f18d1809a81e6c700bcc4a21aeb43ade72bbf8b` | Original freeze mode; no unsafe-none or fast-undocumented mode |
+| Microsoft Detours | `microsoft/Detours` at `1dbd4ea281d73d478aa8d09a8b83fbd265f715f7` | Attach/detach transactions; explicit UpdateThread for current and every owned idle peer |
+| KNSoft SlimDetours | `KNSoft/KNSoft.SlimDetours` at `0255fac24b12781e0f0c35e0ae71bd7fc45411ee` | Official transaction implementation with default automatic suspension |
+| MinHook-Detours | `m417z/minhook-detours` at `e7d5427ede9e658f1810e742822fab2936e058da` | Distinct API/implementation, default suspension and persistent-address original slots |
 
-MinHook-Detours is a separate library/API from classic MinHook. Each engine needs
-an explicit benchmark adapter. Pointer publication, transaction/queue semantics,
-thread preparation and retirement guarantees must be recorded per adapter;
-unsupported operations are N/A rather than fabricated equivalent work.
-Benchmark adapters must not add legacy compatibility aliases to production.
+MinHook-Detours is distinct from both classic MinHook candidates. No production
+legacy aliases are introduced. Detours/SlimDetours have no separate create or
+engine-initialize API: their absent stages are N/A. Complete install/removal
+covers each adapter's entire workflow, while individual stages can perform
+different work. Successful timings do not establish equivalent safety.
 
-## Required measurement and acceptance
+The standalone build uses Release `/O2 /Ob2`, `/MT`, LTO off, C++17 and the same
+C language mode within each compiler job. Pinned dependencies are kept under
+`build/`, with notices included alongside artifact binaries. Official SlimDetours
+uses its supported caller-supplied NDK path with pinned PHNT headers bundled by
+MinHook-Detours. The benchmark compile context supplies missing CRT/SDK includes,
+modern NTDDI declarations and, for MSVC x64 C, the explicit pointer type for the
+pinned sources' `typeof(&RtlIsEcCode)` expression. No engine algorithm is edited.
+These are benchmark build dependencies, not new MithrilHook dependencies.
 
-- Build native Windows Release binaries with the same architecture, toolchain,
-  optimization/CRT settings and owned target/detour fixtures. Retain source
-  hashes, adapter sources, actual binary hashes and exact build commands.
-- Verify target results, original-call behavior, enabled/disabled bytes and
-  complete retirement before accepting a sample. Record refusals/errors and
-  achieved thread coverage beside timings. A weaker success contract cannot
-  silently stand in for strict preparation or safe retirement.
-- Measure create, enable, disable, queued/batched apply where available,
-  removal and engine teardown separately. Vary hook counts and peer-thread
-  counts; use controlled child processes and report per-operation sample counts.
-- Measure direct calls, detour calls and detour-to-original calls separately,
-  with verified results and a method that prevents compiler elimination.
-  Keep setup/teardown outside the call-through measurement interval.
-- Retain raw samples, warmup policy, timer calibration, randomized paired order,
-  repeated independent processes and uncertainty estimates. Report median and
-  tail latency, throughput, CPU cost and actual allocated executable/metadata
-  pages. X64 slots grew from 64 to 256 bytes; slot size alone is not a measured
-  per-process memory or latency regression.
-- Identify the OS build, CPU/VM, affinity/power policy and runner environment.
-  Hosted CI can detect large regressions; small performance rankings require
-  repeatable measurements on representative target hardware.
-- Preserve correctness/ownership gates regardless of speed. Retain the raw
-  artifact and an independently supplied artifact digest so another reviewer
-  can repeat the analysis. Do not derive a benchmark from correctness-test
-  wall-clock time or transfer results between different source revisions.
+## Performance matrix
 
-This suite and its native measurements remain open work. A completed comparison
-must replace NOT MEASURED with identified evidence, including neutral or slower
-results. Until then, engine selection is supported by the documented ownership,
-compatibility and validation properties, not a performance superiority claim.
+Five independent environment jobs run on Windows Server 2022 x64/Win32 MSVC,
+Windows Server 2022 x64 clang-cl, and Windows Server 2025 x64/Win32 MSVC. Record
+the actual OS build, compiler, CPU/VM, logical processors, affinity and power
+policy from each artifact. Do not pool their timings into one architecture,
+compiler or hardware ranking; these server jobs are not desktop-game tests.
+
+Each job runs seven paired rounds with seeded randomized case/candidate order:
+
+- Thirty lifecycle cases: 1/4/11/32/64 hooks crossed with 0/1/4/16/32/64 owned
+  idle peers.
+- Eight steady-concurrency cases: 1/11 hooks and 1/4/16/64 active callers, with
+  hooks kept enabled and all callers joined before mutation or retirement.
+- 2,128 isolated positive child processes per job, 10,640 across five jobs.
+- Three complete engine lifecycles per child. Cold denotes the first engine
+  lifecycle in an already warmed process, not a cold OS/CPU; warm denotes the
+  following two. Report create, activate, single disable/enable, queued apply or
+  transaction toggles, disable, retire and complete install/removal separately.
+- Direct, detour-only, detour-to-original and original-trampoline calls: seven
+  batches of 500,000 verified calls each. Concurrent cases add three synchronized
+  500,000-call batches per worker. Main-thread timing affinity is pinned; worker
+  scheduling remains the recorded process/OS policy.
+
+Source targets are owned, ABI-valid leaf fixtures with distinct per-hook values.
+Timers exclude reporting, fixture setup and result checks. Each phase verifies
+source/detour/original results, exact restored source bytes and handle cleanup.
+There is no live provider, network target, game callback or application DLL here.
+Original slots remain stable, and no caller races a pointer update or free.
+
+Raw QPC ticks, frequency and calibration are retained. Summary medians and
+p95/p99 describe the retained batch samples; call-batch averages are not
+individual-call population tail latency. Paired intervals bootstrap the seven
+per-process round medians against MithrilHook within a case/job. Small changes
+and seven hosted-VM rounds do not establish cross-host speed superiority.
+Executable private pages, process private commit and quantized process CPU
+observations are separate; private commit is not a pure engine allocator count.
+Zero CPU ticks and retained executable-page deltas are reported, not hidden.
+
+## Compatibility and safety observations
+
+Each job also runs 29 source-form cases per engine: ordinary leaf, RIP/absolute
+load, relative CALL/JMP, conditional and LOOP branches, short/hotpatch source,
+registered nonleaf, interior entry, a valid RBP frame with CH modification,
+handler-bearing body, and 66-prefixed CALL/JMP/all sixteen near Jcc conditions.
+
+The current MithrilHook candidate must meet explicit acceptance/refusal oracles.
+Positive x64 frame cases use actual RtlVirtualUnwind to verify exact caller
+stack/return and saved-register state. Unsupported/interior/handler-body and
+ambiguous-prefix cases must refuse cleanly. Architecture-specific N/A results
+are distinct. Other engines' API refusals, failed cases and missing generated
+unwind metadata remain visible. A baseline failure is never relabeled a passing
+negative control or included as a timing sample. Creation-only acceptance does
+not prove correct execution or translated handler scopes.
+
+A separate MithrilHook probe records create/remove support for the actual eleven
+application API names on every environment, without enabling or executing them.
+The production correctness workflow retains its strict 11/11 Windows-2022 gate;
+refusals in this broader OS probe are explicit deployment gaps, not application
+acceptance. Enabling arbitrary system API hooks is outside this timing harness.
+
+## Run and audit
+
+From a clean, committed native Windows checkout:
+
+```powershell
+python scripts/verify_sources.py
+python benchmarks/prepare.py
+cmake -S benchmarks -B build/bench-native -A x64 -T v143
+cmake --build build/bench-native --config Release --parallel 2
+python benchmarks/run.py --build build/bench-native --output build/bench-results
+python benchmarks/run.py --audit build/bench-results
+```
+
+Use Win32 or ClangCL for the corresponding jobs and a fresh result directory.
+Only the new benchmark paths trigger the performance workflow on PRs; it also
+supports manual dispatch. The production library/build defaults are unchanged. The correctness workflow
+also builds a separate consumer from the installed package in all seven native
+cells, checking both static and shared package use before application integration.
+
+The artifact includes binaries/receipts/notices, source and dependency manifests,
+raw JSON/stdout/stderr, compatibility rows, target classifications, complete
+recipe, summaries and REPORT.md. Retain its independently supplied ZIP digest.
+The offline auditor runs without executing Windows binaries and recomputes all
+summary/interval fields (normalized to eight decimal places for portable libm
+rounding), validates the randomized schedule and complete case/round/sample coverage and
+checks raw/binary/source identities and call checksums. Duplicate JSON keys,
+nonfinite values and optimized Python assertion bypass are refused.
+
+Every engine must fail a deliberately corrupted timed detour-to-original
+checksum at its exact oracle; crashes/timeouts cannot satisfy that control.
+An unrelated correctness failure blocks the positive timing run. Offline sample
+mutations separately exercise checksum, operation-count and duplicate-index
+refusals. Hash consistency is not execution attestation: independently review
+the successful native workflow head, build/measurement/audit steps and artifact
+digest before citing results. [Remaining work](REMAINING_WORK.md) separates
+library release gates from Citrine's later integration acceptance.

@@ -1,0 +1,39 @@
+{
+  "schema": "mithrilhook.benchmark-sources.v1",
+  "repositories": {
+    "official": {
+      "repository": "TsudaKageyu/minhook",
+      "commit": "8af6b4acae5a9388fd742b56fa79ece89d96f823"
+    },
+    "patched": {
+      "repository": "cyanoleon/minhook",
+      "commit": "311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38"
+    },
+    "m417z": {
+      "repository": "m417z/minhook",
+      "commit": "4f18d1809a81e6c700bcc4a21aeb43ade72bbf8b"
+    },
+    "detours": {
+      "repository": "microsoft/Detours",
+      "commit": "1dbd4ea281d73d478aa8d09a8b83fbd265f715f7"
+    },
+    "slim": {
+      "repository": "KNSoft/KNSoft.SlimDetours",
+      "commit": "0255fac24b12781e0f0c35e0ae71bd7fc45411ee"
+    },
+    "mhd": {
+      "repository": "m417z/minhook-detours",
+      "commit": "e7d5427ede9e658f1810e742822fab2936e058da"
+    },
+    "official_current": {
+      "repository": "TsudaKageyu/minhook",
+      "commit": "c3fcafdc10146beb5919319d0683e44e3c30d537",
+      "version": "v1.3.4"
+    }
+  },
+  "patched_relocator": {
+    "url": "https://raw.githubusercontent.com/raleonys/citrine-eclipse-mirage/19a22e95931bc94c00d25ef5ec08efac976e0023/cmake/PatchHookRelocator.cmake",
+    "sha256": "4e997051a0de2c8b3d313bf5d64f6e6a90ce9dac3177a11a09b0b864430e41be",
+    "output_sha256": "5d90de54c8a3c04faab6b4368169f4f9fb58c11ecfa45979a7f8808682464080"
+  }
+}

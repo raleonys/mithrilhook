@@ -41,9 +41,10 @@ This result is distinct from actual eleven-hook application acceptance.
 
 ## What these checks do not establish
 
-- Comparative hook-engine performance: there is no retained reproducible timing
-  suite or result for the alternatives. Test durations and the guard-removal
-  compatibility comparison are not benchmarks. See [Benchmarks](BENCHMARKS.md).
+- Comparative performance cannot be inferred from these correctness runs.
+  The separate native suite records source-specific timing/compatibility
+  artifacts; test durations and the guard-removal support comparison are not
+  benchmarks. See [Benchmarks](BENCHMARKS.md).
 - Citrine/game startup, live hook behavior, rollback, shutdown or DLL unload
   acceptance with MithrilHook integrated.
 - Execution across every Windows release/build or target CPU. Current native
@@ -54,6 +55,31 @@ This result is distinct from actual eleven-hook application acceptance.
 
 Outstanding acceptance work and optional extensions are tracked in
 [Remaining work](REMAINING_WORK.md). No stable release has been published.
+
+## Reviewed branch and byte-alias corrections
+
+PR #9 head `614be3d3f1971e508798be21badc5681d391a99a` passed
+[run 43463874300](https://github.com/raleonys/mithrilhook/actions/runs/43463874300):
+24 tests per x64 cell and 19 per Win32 cell, 153 native executions plus two
+portable sanitizer tests. Its linked prefix fixture rejects ambiguous relocated
+near CALL/JMP/Jcc forms without changing output/target bytes, permits an
+unrelocated prefixed instruction, and executes an ordinary branch control through
+source/trampoline/detour/disable/retirement. The actual relocator fixture covers
+3,024 byte-alias combinations plus a word-register control. This addresses the
+confirmed findings in review PRs #7/#8; their documentation merges alone do not
+change runtime behavior. Owner merge/release remains separate.
+
+The subsequent benchmark candidate adds a fresh installed-package consumer in
+each native cell. Its seven additional native CTest executions bring that
+candidate's total to 160 (153 engine + seven package consumers), plus two
+portable tests. This independent find_package/link/runtime check covers Debug/
+Release, static/shared, x64/Win32 and clang-cl without Citrine integration; its
+own exact-head CI must pass before claiming package acceptance.
+
+Native performance, source-form compatibility and actual-API observations are
+recorded by the independent [benchmark workflow](https://github.com/raleonys/mithrilhook/actions/workflows/benchmarks.yml),
+for its own exact source revision. Those source manifests and receipts must not
+be reassigned to this earlier PR #9 validation run or to another benchmark head.
 
 ## Historical stages
 
