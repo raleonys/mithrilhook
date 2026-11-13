@@ -1,9 +1,11 @@
 # Release and integration status
 
-The release candidate is 1.0.0-rc.1. Confirmed reports through PR #16 have merged
-runtime corrections. PR #17 corrects the PUSH operand-size precedence gap and
-prepares the version, changelog and package metadata in the existing review PR.
-Its exact-head checks and benchmark evidence are recorded in that PR.
+The unpublished release candidate is 1.0.0-rc.1. Confirmed reports through
+PR #17 have merged runtime corrections. PR #18 addresses a subsequent confirmed
+internal-CALL failure by refusing overwritten callee destinations before
+publication. Release publication is blocked until that correction and its
+exact-head native/negative-control checks are reviewed. Earlier #17 benchmark
+and package evidence stays pinned to its original source, not these new bytes.
 
 ## Library release gates
 

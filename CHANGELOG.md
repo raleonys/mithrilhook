@@ -52,6 +52,9 @@ version; the CMake numeric component and Windows fixed version are 1.0.0.
 - Apply effective REX.W precedence over 66 when calculating PUSH memory width.
   Cover prefix orders, both patch boundaries and genuine Windows generated
   unwind/publication/retirement behavior. ([#17])
+- Refuse copied relative CALL destinations inside the five-byte entry patch
+  before original publication, including valid instruction boundaries. Keep
+  ordinary outside CALL execution, generated unwind and retirement. ([#18])
 
 ### Packaging and compatibility
 
@@ -97,3 +100,4 @@ Report-only review PRs are not counted as additional software releases.
 [#15]: https://github.com/raleonys/mithrilhook/pull/15
 [#16]: https://github.com/raleonys/mithrilhook/pull/16
 [#17]: https://github.com/raleonys/mithrilhook/pull/17
+[#18]: https://github.com/raleonys/mithrilhook/pull/18

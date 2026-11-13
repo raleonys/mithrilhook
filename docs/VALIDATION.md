@@ -2,10 +2,11 @@
 
 ## Release candidate and exact source identity
 
-The distribution version is 1.0.0-rc.1. The candidate prepared in
-[PR #17](https://github.com/raleonys/mithrilhook/pull/17) includes the merged
-corrections through PR #16 plus effective REX.W/66 PUSH range handling. Its
-completed validation and benchmark run links belong to that PR's exact head.
+The unpublished distribution version is 1.0.0-rc.1. The candidate in
+[PR #18](https://github.com/raleonys/mithrilhook/pull/18) adds internal-CALL
+patch-window refusal to merged PR #17. Its new native results belong to that
+PR's exact head. The completed #17 validation and benchmark results retain
+their earlier source identity.
 A document, tag or version change does not transfer evidence to other bytes.
 
 The candidate matrix contains four x64 cells (MSVC Debug/Release static,
@@ -14,7 +15,14 @@ MSVC Release shared and clang-cl Release static) and three Win32 MSVC cells
 real owned-code execution, peer/retirement behavior and exact negative controls.
 Each cell also builds and executes an independent installed-package consumer.
 The portable decoder and relocator run under Linux ASan/UBSan; the relocator
-contains 9,311 assertions, including 511 PUSH prefix/range layouts. Word-PUSH
+contains 11,790 assertions, including 511 PUSH prefix/range layouts and 1,040
+CALL prefix/site/destination layouts plus ten forward-entry/expansion cases.
+Internal CALL refusal is checked before output or entry-patch publication.
+A generated native negative control removes only that refusal and must exit 1
+at the exact refusal assertion before any unsafe original is executed.
+Ordinary outside CALL controls execute source/original/detour/restore paths on
+both architectures; registered x64 controls verify source v1/generated v2
+unwind and actual generated-table retirement. Word-PUSH
 range checks are structural; the registered native execution/unwind fixture
 uses ABI-describable eight-byte stack allocations.
 
@@ -30,6 +38,7 @@ These records validate their pinned sources, not later candidate bytes.
 
 | Stage | Exact source / run | Completed evidence |
 | --- | --- | --- |
+| Through PR #17 | `f006e53116b61ed9baabec025ed6bb26a7c6c7eb`, [43494694097](https://github.com/raleonys/mithrilhook/actions/runs/43494694097) | 189 native engine tests + seven installed consumers (196 native total), two portable tests; merged as `9f822317bcf3fa52a12683e0fbfaf1e28e3bcaee`. Predates the internal-CALL correction in #18. |
 | Through PR #16 | `59c851fd772838a9b84f3df8c202f657f1cec5f8`, [43488613785](https://github.com/raleonys/mithrilhook/actions/runs/43488613785) | 185 native engine tests + seven installed consumers (192 native total), two portable tests; merged master `c02605cb041034c3158abd0f5974f3b564657e71` has the identical tree. |
 | RIP access hardening, PR #15 | `ca1de1620b21b9580a48b608667075384fbcfc0a`, [43486839224](https://github.com/raleonys/mithrilhook/actions/runs/43486839224) | 171 native including consumers + two portable; native source/original/detour/restore/retirement and 512-byte access controls. |
 | Internal branches, PR #14 | `56c7fb3f0170a3de65b8c3a2eef40a4ce720143a`, [43482234324](https://github.com/raleonys/mithrilhook/actions/runs/43482234324) | 167 native including consumers + two portable; backward JMP/Jcc and LOOP after expansion, mapped boundaries and forward controls. |

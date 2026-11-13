@@ -9,7 +9,7 @@ release. The owner controls publication.
 
 The candidate contains the independent thirteen-export MTH API, strict
 ownership core, bounded generated unwind support and reviewed corrections
-through the PUSH range fix in PR #17. The [changelog](../CHANGELOG.md) groups
+through the internal-CALL refusal in PR #18. The [changelog](../CHANGELOG.md) groups
 user-visible behavior and links the implementation PRs. Historical report-only
 PRs and the old 0.1.0 development identifier are not prior stable releases.
 

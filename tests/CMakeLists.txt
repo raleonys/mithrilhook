@@ -34,6 +34,7 @@ mth_linked(mithrilhook_live_call_contracts native/live_calls.c)
 mth_linked(mithrilhook_retirement_contracts native/retirement_peer.cpp)
 mth_linked(mithrilhook_prefixed_branch_contracts native/prefixed_branches.c)
 mth_linked(mithrilhook_internal_branch_contracts native/internal_branches.c)
+mth_linked(mithrilhook_internal_call_contracts native/internal_calls.c)
 mth_linked(mithrilhook_overlapping_patch_contracts native/overlapping_patches.c)
 mth_fixture(mithrilhook_patch_interval_contracts native/patch_intervals.c)
 mth_linked(mithrilhook_target_probe native/target_probe.c)
@@ -56,12 +57,20 @@ endif()
 # Exact-assertion controls are generated under the build tree, never in src/.
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   ${PROJECT_SOURCE_DIR}/src/hook.c
+  ${PROJECT_SOURCE_DIR}/src/trampoline.c
   ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py
   ${PROJECT_SOURCE_DIR}/metadata/SOURCE_MANIFEST.json)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py prepare --output ${CMAKE_CURRENT_BINARY_DIR}/controls RESULT_VARIABLE result)
 if(NOT result EQUAL 0)
   message(FATAL_ERROR "MithrilHook negative control preparation failed")
 endif()
+add_executable(mithrilhook_control_internal_call native/internal_calls.c
+  ${PROJECT_SOURCE_DIR}/src/hook.c ${PROJECT_SOURCE_DIR}/src/buffer.c
+  ${PROJECT_SOURCE_DIR}/${MTH_HDE} ${CMAKE_CURRENT_BINARY_DIR}/controls/internal-call.c)
+target_include_directories(mithrilhook_control_internal_call PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(mithrilhook_control_internal_call PRIVATE _WIN32_WINNT=0x0601)
+add_test(NAME mithrilhook_control_internal_call COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py run --mode internal-call -- $<TARGET_FILE:mithrilhook_control_internal_call>)
+set_tests_properties(mithrilhook_control_internal_call PROPERTIES TIMEOUT 45)
 add_executable(mithrilhook_control_overlap native/overlapping_patches.c ${MTH_PRIVATE})
 target_include_directories(mithrilhook_control_overlap PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 target_compile_definitions(mithrilhook_control_overlap PRIVATE MTH_TEST_ENGINE_SOURCE="${CMAKE_CURRENT_BINARY_DIR}/controls/overlap.c" _WIN32_WINNT=0x0601)

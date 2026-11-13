@@ -35,6 +35,13 @@ are refused, not emulated with stack operations that bypass control-flow
 mitigations. Ordinary relative CALL remains supported within the documented
 scope; general return-address introspection is not preserved by relocation.
 
+A copied relative CALL into [target,target+5) returns
+MTH_ERROR_UNSUPPORTED_FUNCTION before publication, including valid instruction
+boundaries. Those source bytes will be overwritten. Internal CALL subroutines
+do not have a supported return/unwind transformation; the JMP/Jcc/LOOP mapping
+below does not imply CALL support. Calls outside this window retain their
+absolute destination, subject to the existing CALL-next and prefix checks.
+
 Relative JMP/Jcc/LOOP destinations inside the five-byte patch interval are
 resolved through the completed old-to-new instruction-boundary map. This
 preserves backward targets after earlier instruction expansion. Destinations

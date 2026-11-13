@@ -2,8 +2,9 @@
 
 ## Review status
 
-This is a report-only review. It does not change the runtime engine. The
-finding was reproduced against `9f822317bcf3fa52a12683e0fbfaf1e28e3bcaee`,
+The initial report did not change the runtime engine. A correction and tests
+are now included in this same PR; the original observations remain below.
+The finding was reproduced against `9f822317bcf3fa52a12683e0fbfaf1e28e3bcaee`,
 the merge commit of PR #17 and current `master` at the time of review.
 
 ## Finding
@@ -84,3 +85,46 @@ negative control, source restoration, unwind registration/retirement and the
 existing internal JMP/Jcc/LOOP matrix. A negative control should make the old
 unmapped-CALL behavior fail so that simple acceptance without remapping cannot
 satisfy the test.
+
+## Correction in this PR
+
+Refuse a copied relative CALL into [target,target+5) before original
+publication on both x86 and x64, including valid instruction boundaries.
+The existing internal branch mapping does not establish a general subroutine
+return/unwind contract. Keeping this form explicitly unsupported avoids
+publishing a CALL into source bytes that the hook will overwrite. Outside
+relative calls keep their existing fixup; CALL-next, ambiguous 66 prefixes
+and other conservative refusals remain intact.
+
+An independent real Linux x64 CPU diagnostic with projected memory APIs
+reproduced source/original returning 42 before the synthetic patch, with an
+embedded CALL pointer to source+2. Its bounded post-patch child faulted with
+SIGILL (the original reporter observed SIGSEGV). The corrected relocator
+refuses the same layout. Neither fault is used as a passing negative control.
+The unmodified official MinHook relative-CALL path also keeps the original
+source destination; this is an inherited algorithm gap, not a PUSH fix
+regression introduced by #17.
+
+Portable ASan/UBSan coverage adds 1,040 layouts: 26 effective legacy/REX prefix
+orders, five CALL sites and eight destinations covering the five overwritten
+offsets, both exact outside boundaries and a remote callee. Ten additional
+cases cover the exact forward entry and earlier Jcc expansion. The suite also
+checks unchanged source bytes and exact outside-call pointers. All 11,790
+relocator assertions pass locally. Against uncorrected source the new suite
+must exit 1 at its specific CALL range assertion.
+
+The native fixture starts with the exact valid source returning 42 and checks
+refusal before any original execution or activation. It covers every patch
+offset (mapped and unmapped), CALL sites, prefixes and preceding expansion,
+unchanged output/code and absent hook ownership. Ordinary external CALLs then
+exercise creation, original execution, enable/disable/removal and source/handle
+restoration on x86/x64. A registered x64 forty-byte allocation control checks
+source v1/generated v2 RtlVirtualUnwind before/after activation, exact caller
+and stack recovery, and deletion of the generated function table on removal.
+A native negative control removes only the new CALL guard and requires exit 1
+at exactly `internal CALL refuses before original publication`; no fault or
+timeout can satisfy it. Exact-head Windows run links are recorded in PR #18.
+
+This finding blocks publication of the candidate until the correction and
+fresh native evidence are reviewed. Historical #17 timings/packages keep
+their original source identity and do not validate this correction.

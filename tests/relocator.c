@@ -120,6 +120,54 @@ static void internal_branch_cases(BYTE *source, BYTE *trampoline)
     }
 }
 
+static void internal_call_cases(BYTE *source, BYTE *trampoline)
+{
+    const BYTE legacy[] = {0,0x2e,0x3e,0x67,0xf2,0xf3};
+    const int destinations[] = {-1,0,1,2,3,4,5,64};
+    UINT form,site,target,expanded;
+    for(form=0;form<26;++form)
+    for(site=0;site<5;++site)
+    for(target=0;target<sizeof(destinations)/sizeof(destinations[0]);++target)
+    {
+        BYTE prefix[2];UINT size=0,length;INT32 displacement;
+        BOOL accepted;TRAMPOLINE ct;BYTE snapshot[128];
+        if(form<6){if(form){prefix[0]=legacy[form];size=1;}}
+        else if(form<22){prefix[0]=(BYTE)(0x40+form-6);size=1;}
+        else
+        {
+            prefix[0]=form<24?0x67:0x2e;prefix[1]=0x48;size=2;
+            if(form&1){prefix[1]=prefix[0];prefix[0]=0x48;}
+        }
+        length=size+5;displacement=destinations[target]-(INT32)(site+length);
+        accepted=(destinations[target]<0||destinations[target]>=5)&&displacement!=0;
+        memset(source,0x90,128);memcpy(source+site,prefix,size);
+        source[site+size]=0xe8;memcpy(source+site+size+1,&displacement,4);
+        source[site+length]=0xc3;memcpy(snapshot,source,sizeof(snapshot));
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct)==accepted,
+            "CALL into the five-byte patch refuses before original publication");
+        check(!memcmp(source,snapshot,sizeof(snapshot)),"CALL range admission preserves source bytes");
+        if(accepted)
+        {
+            UINT64 address;memcpy(&address,trampoline+site+8,8);
+            check(address==(UINT64)(ULONG_PTR)(source+destinations[target]),
+                "outside CALL retains its exact original destination");
+        }
+    }
+    for(expanded=0;expanded<2;++expanded)
+    for(target=0;target<5;++target)
+    {
+        TRAMPOLINE ct;INT32 displacement=(INT32)target-9;
+        const BYTE report[]={0xeb,2,0xc3,0x90,0xe8,0xf9,0xff,0xff,0xff,0xb8,42,0,0,0,0xc3};
+        memset(source,0x90,128);memcpy(source,report,sizeof(report));
+        if(expanded){source[0]=0x74;source[1]=30;source[2]=0x90;}
+        memcpy(source+5,&displacement,4);
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(!MthInternal_CreateTrampolineFunction(&ct),
+            "forward entry and earlier expansion cannot hide an internal CALL");
+    }
+}
+
 static void rip_patch_cases(BYTE *source, BYTE *trampoline)
 {
     static const struct { BYTE bytes[16]; UINT length; BOOL accepted; } cases[] = {
@@ -259,6 +307,7 @@ int main(void)
     memcpy(code+64,xbegin,sizeof xbegin);
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");
     internal_branch_cases(code + 64, code + 512);
+    internal_call_cases(code + 1024, code + 512);
     rip_patch_cases(code + 1024, code + 512);
     push_prefix_cases(code + 1024, code + 512);
     {

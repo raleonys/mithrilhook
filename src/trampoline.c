@@ -446,6 +446,12 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         {
             // Direct relative CALL
             ULONG_PTR dest = pOldInst + hs.len + (INT32)hs.imm.imm32;
+            /* The entry patch destroys this callee. Internal subroutine
+             * entries do not have a proven return/unwind mapping; refuse
+             * rather than publish a CALL into overwritten source bytes. */
+            if (dest >= (ULONG_PTR)ct->pTarget &&
+                dest - (ULONG_PTR)ct->pTarget < sizeof(JMP_REL))
+                return FALSE;
 #if defined(_M_X64) || defined(__x86_64__)
             call.address = dest;
 #else
