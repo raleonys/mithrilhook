@@ -45,7 +45,7 @@ jobs:
         run: |
           from pathlib import Path
           for line in Path('build/native/Testing/Temporary/LastTest.log').read_text(errors='replace').splitlines():
-              if line.startswith(('TARGET_PROBE', 'TARGET_COMPARISON')):
+              if line.startswith(('TARGET_PROBE', 'TARGET_COMPARISON', 'UNWIND_TARGET')):
                   print(line)
       - run: cmake --install build/native --config ${{ matrix.config }} --prefix dist/install
       - if: matrix.shared == 'ON'
