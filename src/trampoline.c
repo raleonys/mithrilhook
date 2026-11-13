@@ -297,7 +297,7 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
         /* HDE's 66-prefixed near displacement width is insufficient to model
          * vendor/mode-specific destination semantics. Refuse before copying;
          * a successful trampoline must never silently branch to another IP. */
-        if (hs.p_66 && (hs.opcode == 0xe8 || hs.opcode == 0xe9 ||
+        if (oldPos < sizeof(JMP_REL) && hs.p_66 && (hs.opcode == 0xe8 || hs.opcode == 0xe9 ||
             (hs.opcode == 0x0f && hs.opcode2 >= 0x80 && hs.opcode2 <= 0x8f)))
             return FALSE;
 

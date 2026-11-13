@@ -37,6 +37,13 @@ int main(void)
         require(original==(LPVOID)(ULONG_PTR)0x1234&&!memcmp(snapshot,code,sizeof(snapshot)),
             "refused prefix preserves caller output and every target byte");
     }
+    /* An instruction beyond the relocated prefix is not rewritten. Its own
+     * vendor-specific semantics remain at the original address. */
+    memset(code,0x90,32);code[5]=0x66;code[6]=0xe9;code[7]=5;code[8]=code[9]=code[10]=0;
+    {LPVOID original=NULL;
+     require(MTH_CreateHook(code,code+64,&original)==MTH_OK&&original!=NULL,
+        "an unrelocated prefixed instruction does not cause a compatibility refusal");
+     require(MTH_RemoveHook(code)==MTH_OK,"retire noncopied-prefix positive control");}
     /* Same displacement with an ordinary JMP retains its destination/result. */
     memset(code,0x90,32);code[0]=0xe9;{INT32 delta=11;memcpy(code+1,&delta,4);}
     code[16]=0xb8;code[17]=42;code[18]=code[19]=code[20]=0;code[21]=0xc3;
