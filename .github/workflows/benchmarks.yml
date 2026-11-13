@@ -10,12 +10,17 @@ permissions:
   contents: read
 jobs:
   benchmark:
-    runs-on: windows-2022
-    timeout-minutes: 40
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        arch: [x64, Win32]
+        include:
+          - {os: windows-2022, arch: x64, toolset: v143}
+          - {os: windows-2022, arch: Win32, toolset: v143}
+          - {os: windows-2022, arch: x64, toolset: ClangCL}
+          - {os: windows-2025, arch: x64, toolset: v143}
+          - {os: windows-2025, arch: Win32, toolset: v143}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,14 +31,14 @@ jobs:
       - run: python scripts/verify_sources.py
       - run: python benchmarks/run.py --self-test
       - run: python benchmarks/prepare.py
-      - run: cmake -S benchmarks -B build/bench-native -A ${{ matrix.arch }} -T v143
+      - run: cmake -S benchmarks -B build/bench-native -A ${{ matrix.arch }} -T ${{ matrix.toolset }}
       - run: cmake --build build/bench-native --config Release --parallel 2
       - run: python benchmarks/run.py --build build/bench-native --output build/bench-results
       - run: python benchmarks/run.py --audit build/bench-results
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: hook-benchmark-${{ matrix.arch }}
+          name: hook-benchmark-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.toolset }}
           path: |
             build/bench-results
             build/bench-prepared

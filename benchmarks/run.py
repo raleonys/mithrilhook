@@ -5,7 +5,8 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 if sys.flags.optimize:raise RuntimeError('The auditor requires Python assertion checks enabled')
 ENGINES=['mithrilhook','official','patched','m417z','detours','slim','mhd']
-CASES=[(1,0),(11,0),(11,4),(11,64),(64,4)]
+CASES=[(hooks,peers) for hooks in (1,4,11,32,64) for peers in (0,1,4,16,32,64)]
+ROUNDS=7
 CALL_METRICS={'direct_call','detour_only','detour_original','original_trampoline'}
 COMMON={'activate_batch','complete_install','disable_batch','complete_remove','single_disable','single_enable','queued_or_transaction_disable','queued_or_transaction_enable'}
 SEPARATE=set(ENGINES)-{'detours','slim'}
@@ -79,7 +80,7 @@ def analyze(entries,receipts,rounds):
  memory=[]
  for (engine,hooks,peers),rows in sorted(resources.items()):
   memory.append({'engine':engine,'hooks':hooks,'peers':peers,'samples':len(rows),'exec_installed_delta_median':statistics.median(r['exec_installed']-r['exec_before'] for r in rows),'exec_retired_delta_median':statistics.median(r['exec_after']-r['exec_before'] for r in rows),'private_installed_delta_median':statistics.median(r['private_installed']-r['private_before'] for r in rows),'cpu_install_zero_samples':sum(r['cpu_install_100ns']==0 for r in rows),'cpu_remove_zero_samples':sum(r['cpu_remove_100ns']==0 for r in rows)})
- return {'schema':'mithrilhook.benchmark-summary.v1','rounds':rounds,'children':len(entries),'timings':summary,'resources':memory,'limits':['leaf fixtures; idle owned peers; no application/game acceptance','p95/p99 describe batch samples, not individual-call population tails','five rounds on a hosted VM do not establish cross-host speed superiority','adapter thread and retirement contracts differ; no equivalent-safety ranking']}
+ return {'schema':'mithrilhook.benchmark-summary.v1','rounds':rounds,'children':len(entries),'timings':summary,'resources':memory,'limits':['leaf fixtures; idle owned peers; no application/game acceptance','p95/p99 describe batch samples, not individual-call population tails','seven rounds on a hosted VM do not establish cross-host speed superiority','adapter thread and retirement contracts differ; no equivalent-safety ranking']}
 
 def check_controls():
  # The real child corruption control runs separately under Windows. These
@@ -102,18 +103,18 @@ def check_controls():
 
 def audit(output):
  output=Path(output);manifest=read(output/'run.json')
- assert manifest['engines']==ENGINES and manifest['cases']==[list(c) for c in CASES] and manifest['rounds']==5
+ assert manifest['engines']==ENGINES and manifest['cases']==[list(c) for c in CASES] and manifest['rounds']==ROUNDS
  receipts={name:read(output/'binaries'/f'bench_{name}.receipt.json') for name in ENGINES}
  for name,receipt in receipts.items():
   assert sha(output/'binaries'/f'bench_{name}.exe')==receipt['exe_sha256']
   assert receipt['source_digest']==manifest['source_digest'] and receipt['input_digest']==manifest['input_digest'] and receipt['configuration']=='Release'
  assert sha(output/'inputs.json')==manifest['input_digest'] and sha(output/'SOURCE_MANIFEST.json')==manifest['source_digest']
  entries=[]
- assert len(manifest['children'])==len(ENGINES)*len(CASES)*5
+ assert len(manifest['children'])==len(ENGINES)*len(CASES)*ROUNDS
  for item in manifest['children']:
   path=output/'raw'/item['file'];assert path.parent==output/'raw' and path.suffix=='.json'
   assert sha(path)==item['sha256'];entry=read(path);assert entry['run_id']==manifest['run_id'];assert entry['exe_sha256']==receipts[entry['engine']]['exe_sha256'];entries.append(entry)
- expected=analyze(entries,receipts,5)
+ expected=analyze(entries,receipts,ROUNDS)
  assert read(output/'summary.json')==expected
  assert len(manifest['controls'])==len(ENGINES) and all(c['returncode']==1 and c['expected_failure']=='complete timed-call checksum' for c in manifest['controls'])
  print('PASS: offline audit of source/build identities, complete recipe, checksums, raw hashes and recomputed statistics')
@@ -137,14 +138,14 @@ def measure(build,output):
   assert receipt['exe_sha256']==sha(exe) and receipt['source_digest']==sha(ROOT/'metadata/SOURCE_MANIFEST.json') and receipt['input_digest']==sha(inputs)
   receipts[engine]=receipt
   shutil.copy2(exe,output/'binaries'/exe.name);shutil.copy2(exe.with_suffix('.receipt.json'),output/'binaries'/exe.with_suffix('.receipt.json').name)
- manifest={'schema':'mithrilhook.benchmark-run.v1','run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count()},'engines':ENGINES,'cases':CASES,'rounds':5,'seed':19473,'children':[],'controls':[]}
+ manifest={'schema':'mithrilhook.benchmark-run.v1','run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count()},'engines':ENGINES,'cases':CASES,'rounds':ROUNDS,'seed':19473,'children':[],'controls':[]}
  for engine in ENGINES:
   result=subprocess.run([str(build/'Release'/f'bench_{engine}.exe'),'1','0','corrupt-checksum'],capture_output=True,text=True,timeout=60)
   assert result.returncode==1 and [s.split(' error=')[0] for s in result.stderr.splitlines() if s.startswith('FAIL:')]==['FAIL: complete timed-call checksum'],(engine,result.returncode,result.stderr)
   (output/'raw'/f'control-{engine}.stdout').write_text(result.stdout);(output/'raw'/f'control-{engine}.stderr').write_text(result.stderr)
   manifest['controls'].append({'engine':engine,'returncode':result.returncode,'expected_failure':'complete timed-call checksum'})
  entries=[];rng=random.Random(manifest['seed'])
- for round_number in range(5):
+ for round_number in range(ROUNDS):
   cases=list(CASES);rng.shuffle(cases)
   for hooks,peers in cases:
    order=list(ENGINES);rng.shuffle(order)
@@ -158,8 +159,8 @@ def measure(build,output):
     validate_child(entry,receipts[engine]);path=output/'raw'/(stem+'.json');write(path,entry)
     manifest['children'].append({'file':path.name,'sha256':sha(path)});entries.append(entry)
     write(output/'run.json',manifest)
-  print(f'Completed paired round {round_number+1}/5',flush=True)
- write(output/'summary.json',analyze(entries,receipts,5));write(output/'run.json',manifest)
+  print(f'Completed paired round {round_number+1}/{ROUNDS}',flush=True)
+ write(output/'summary.json',analyze(entries,receipts,ROUNDS));write(output/'run.json',manifest)
  audit(output)
  print_report(output)
 
