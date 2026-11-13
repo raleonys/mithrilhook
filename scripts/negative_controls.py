@@ -21,6 +21,7 @@ CASES={
  'apply':('MTH_STATUS WINAPI MTH_ApplyQueued(', 'FAIL: no-op apply must not hide unresolved owner'),
 }
 EXTRA={
+ 'overlap':('static BOOL IsPatchIntervalAvailable(ULONG_PTR start, SIZE_T size)\n{','TRUE','FAIL: conflicting hook creation refuses before publishing an original'),
  'reconcile':('static BOOL ReconcileThreadIPs(PFROZEN_THREADS pThreads)\n{','TRUE','FAIL: partial disable maps peers only for physically written targets'),
  'coverage':('static MTH_STATUS VerifyFrozenThreadCoverage(PFROZEN_THREADS pThreads)\n{','MTH_OK','FAIL: peer born after enumeration rejects mutation before patching'),
  'unwind':('static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)\n{','TRUE',None),
