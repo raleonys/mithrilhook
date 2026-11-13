@@ -42,3 +42,8 @@ Ankh.NoLoad
 
 #Visual Studio Code files
 .vscode/
+
+# MithrilHook generated output
+/build/
+/dist/
+__pycache__/

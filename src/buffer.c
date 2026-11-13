@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  MinHook - The Minimalistic API Hooking Library for x64/x86
  *  Copyright (C) 2009-2017 Tsuda Kageyu.
  *  All rights reserved.
@@ -65,23 +65,32 @@ typedef struct _MEMORY_BLOCK
 static PMEMORY_BLOCK g_pMemoryBlocks;
 
 //-------------------------------------------------------------------------
-VOID InitializeBuffer(VOID)
+VOID MthInternal_InitializeBuffer(VOID)
 {
     // Nothing to do for now.
 }
 
 //-------------------------------------------------------------------------
-VOID UninitializeBuffer(VOID)
+BOOL MthInternal_UninitializeBuffer(VOID)
 {
-    PMEMORY_BLOCK pBlock = g_pMemoryBlocks;
-    g_pMemoryBlocks = NULL;
-
-    while (pBlock)
+    while (g_pMemoryBlocks != NULL)
     {
-        PMEMORY_BLOCK pNext = pBlock->pNext;
-        VirtualFree(pBlock, 0, MEM_RELEASE);
-        pBlock = pNext;
+        PMEMORY_BLOCK block = g_pMemoryBlocks;
+        PMEMORY_BLOCK next = block->pNext;
+        if (!VirtualFree(block, 0, MEM_RELEASE))
+            return FALSE;
+        g_pMemoryBlocks = next;
     }
+    return TRUE;
+}
+
+BOOL MthInternal_IsBufferAddress(ULONG_PTR address)
+{
+    PMEMORY_BLOCK block;
+    for (block = g_pMemoryBlocks; block != NULL; block = block->pNext)
+        if (address >= (ULONG_PTR)block && address - (ULONG_PTR)block < MEMORY_BLOCK_SIZE)
+            return TRUE;
+    return FALSE;
 }
 
 //-------------------------------------------------------------------------
@@ -244,7 +253,7 @@ static PMEMORY_BLOCK GetMemoryBlock(LPVOID pOrigin)
 }
 
 //-------------------------------------------------------------------------
-LPVOID AllocateBuffer(LPVOID pOrigin)
+LPVOID MthInternal_AllocateBuffer(LPVOID pOrigin)
 {
     PMEMORY_SLOT  pSlot;
     PMEMORY_BLOCK pBlock = GetMemoryBlock(pOrigin);
@@ -263,49 +272,45 @@ LPVOID AllocateBuffer(LPVOID pOrigin)
 }
 
 //-------------------------------------------------------------------------
-VOID FreeBuffer(LPVOID pBuffer)
+BOOL MthInternal_FreeBuffer(LPVOID pBuffer)
 {
-    PMEMORY_BLOCK pBlock = g_pMemoryBlocks;
-    PMEMORY_BLOCK pPrev = NULL;
-    ULONG_PTR pTargetBlock = ((ULONG_PTR)pBuffer / MEMORY_BLOCK_SIZE) * MEMORY_BLOCK_SIZE;
-
-    while (pBlock != NULL)
+    PMEMORY_BLOCK block = g_pMemoryBlocks, previous = NULL;
+    ULONG_PTR target = (ULONG_PTR)pBuffer / MEMORY_BLOCK_SIZE * MEMORY_BLOCK_SIZE;
+    while (block != NULL)
     {
-        if ((ULONG_PTR)pBlock == pTargetBlock)
+        if ((ULONG_PTR)block == target)
         {
-            PMEMORY_SLOT pSlot = (PMEMORY_SLOT)pBuffer;
-#ifdef _DEBUG
-            // Clear the released slot for debugging.
-            memset(pSlot, 0x00, sizeof(MEMORY_SLOT));
-#endif
-            // Restore the released slot to the list.
-            pSlot->pNext = pBlock->pFree;
-            pBlock->pFree = pSlot;
-            pBlock->usedCount--;
-
-            // Free if unused.
-            if (pBlock->usedCount == 0)
+            if (block->usedCount == 1)
             {
-                if (pPrev)
-                    pPrev->pNext = pBlock->pNext;
-                else
-                    g_pMemoryBlocks = pBlock->pNext;
-
-                VirtualFree(pBlock, 0, MEM_RELEASE);
+                PMEMORY_BLOCK next = block->pNext;
+                if (!VirtualFree(block, 0, MEM_RELEASE))
+                    return FALSE;
+                if (previous != NULL) previous->pNext = next;
+                else g_pMemoryBlocks = next;
             }
-
-            break;
+            else
+            {
+                PMEMORY_SLOT slot = (PMEMORY_SLOT)pBuffer;
+#ifdef _DEBUG
+                memset(slot, 0, sizeof(MEMORY_SLOT));
+#endif
+                slot->pNext = block->pFree;
+                block->pFree = slot;
+                --block->usedCount;
+            }
+            return TRUE;
         }
-
-        pPrev = pBlock;
-        pBlock = pBlock->pNext;
+        previous = block;
+        block = block->pNext;
     }
+    return FALSE;
 }
 
 //-------------------------------------------------------------------------
-BOOL IsExecutableAddress(LPVOID pAddress)
+BOOL MthInternal_IsExecutableAddress(LPVOID pAddress)
 {
     MEMORY_BASIC_INFORMATION mi;
     return VirtualQuery(pAddress, &mi, sizeof(mi)) && mi.State == MEM_COMMIT &&
-           (mi.Protect & PAGE_EXECUTE_FLAGS);
+           (mi.Protect & PAGE_EXECUTE_FLAGS) &&
+           !(mi.Protect & (PAGE_GUARD | PAGE_NOACCESS));
 }

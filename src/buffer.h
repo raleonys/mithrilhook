@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  MinHook - The Minimalistic API Hooking Library for x64/x86
  *  Copyright (C) 2009-2017 Tsuda Kageyu.
  *  All rights reserved.
@@ -35,8 +35,9 @@
     #define MEMORY_SLOT_SIZE 32
 #endif
 
-VOID   InitializeBuffer(VOID);
-VOID   UninitializeBuffer(VOID);
-LPVOID AllocateBuffer(LPVOID pOrigin);
-VOID   FreeBuffer(LPVOID pBuffer);
-BOOL   IsExecutableAddress(LPVOID pAddress);
+VOID   MthInternal_InitializeBuffer(VOID);
+BOOL   MthInternal_UninitializeBuffer(VOID);
+LPVOID MthInternal_AllocateBuffer(LPVOID pOrigin);
+BOOL   MthInternal_FreeBuffer(LPVOID pBuffer);
+BOOL   MthInternal_IsBufferAddress(ULONG_PTR address);
+BOOL   MthInternal_IsExecutableAddress(LPVOID pAddress);

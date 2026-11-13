@@ -1,94 +1,103 @@
-# MinHook
+# MithrilHook
 
-[![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)](https://opensource.org/licenses/BSD-2-Clause)
+MithrilHook is an independently maintained Windows x86/x64 function-hooking
+library derived from MinHook. It has its own **MTH_*** API, build targets,
+package identity and version history. There is no legacy API alias header.
 
-The Minimalistic x86/x64 API Hooking Library for Windows
+This initial development candidate integrates strict peer preparation,
+retryable patch completion, generated-code retirement checks and checked
+instruction relocation. **It is not a production acceptance or universal
+unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
+[Validation](docs/VALIDATION.md).
 
-[https://www.codeproject.com/articles/MinHook-The-Minimalistic-x-x-API-Hooking-Libra](https://web.archive.org/web/20260130063806/https://www.codeproject.com/articles/MinHook-The-Minimalistic-x-x-API-Hooking-Libra#comments-section)
+## What is included
 
-### Version history
+- Owned duplicated peer handles, strict suspend/context checks, and retryable
+  resume/handle/backing-array cleanup with both emergency ownership slots.
+- Correct enable/disable IP mapping and cleanup barriers on public mutations.
+- A completion journal for instruction-cache flush and each page's protection;
+  physically written hook state remains recorded if completion fails.
+- Trampoline/relay flush before publication; conservative IP/register/stack
+  checks before retiring generated code; retryable buffer and heap release.
+- Checked RIP-relative relocation, EIP wrapping, VEX classification, explicit
+  rejection of unsupported relative instructions, and bounded code reads.
+- Alignment-safe decoder/displacement access and same-thread reentry refusal.
 
-- **v1.3.4 - 28 Mar 2025**
-  * Improved error handling for enumerating and suspending threads.
-  * Visual Studio 2022 support.
-  * CMake support.
-  * Fixed compilation with Clang.
-  * Fixed compilation as C++ code.
+Strict behavior is compiled directly into the core. There is no best-effort
+mode or opt-out from the ownership checks. No application repository, source
+patch script, third-party NT-header package, or external decoder package is
+required to build MithrilHook.
 
-- **v1.3.3 - 8 Jan 2017**
-  * Added a helper function ```MH_CreateHookApiEx```. (Thanks to asm256)
-  * Support Visual Studio 2017 RC.
+## Build
 
-- **v1.3.2.1 - 9 Nov 2015**  (Nuget package only)
-  * Fixed an insufficient support for Visual Studio 2015.
+Windows requires an x86/x64 C compiler and Windows SDK. CMake 3.20 or newer is
+the supported build entry. Production sources use C17; native tests also need
+C++17 and Python 3.9+. Compiler-provided CRT support is used normally.
 
-- **v1.3.2 - 1 Nov 2015**
-  * Support Visual Studio 2015.
-  * Support MinGW.
+```powershell
+cmake -S . -B build/native -A x64 -DBUILD_TESTING=ON
+cmake --build build/native --config Debug
+ctest --test-dir build/native -C Debug --output-on-failure
+cmake --build build/native --config Release
+ctest --test-dir build/native -C Release --output-on-failure
+cmake --install build/native --config Release --prefix dist/install
+```
 
-- **v1.3.2-beta3 - 21 Jul 2015**  (Nuget package only)
-  * Support MinGW. (Experimental)
+Use `-A Win32` for x86. Set `-DBUILD_SHARED_LIBS=ON` for the DLL; its product
+name is MithrilHook and its exports are exclusively `MTH_*`. MSVC defaults to
+`/MT` or `/MTd`; set `CMAKE_MSVC_RUNTIME_LIBRARY` explicitly when another CRT
+selection is needed. The CMake target is `MithrilHook::mithrilhook` and the
+installed package is `MithrilHook`.
 
-- **v1.3.2-beta2 - 18 May 2015**
-  * Fixed some subtle bugs. (Thanks to RaMMicHaeL)
-  * Added a helper function ```MH_StatusToString```. (Thanks to Jan Klass)
+```cmake
+find_package(MithrilHook CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE MithrilHook::mithrilhook)
+```
 
-- **v1.3.2-beta - 12 May 2015**
-  * Fixed a possible thread deadlock in x64 mode. (Thanks to Aleh Kazakevich)
-  * Reduced the footprint a little more.
-  * Support Visual Studio 2015 RC. (Experimental)
+## API and lifetime
 
-- **v1.3.1.1 - 7 Apr 2015**  (Nuget package only)
-  * Support for WDK8.0 and 8.1.
+Include `<MithrilHook.h>`. Initialize, create, queue activation, and apply with
+`MTH_Initialize`, `MTH_CreateHook`, `MTH_QueueEnableHook` and `MTH_ApplyQueued`.
+Use `MTH_StatusToString` for diagnostics. `MTH_ERROR_REENTRANT_CALL` reports an
+operation recursively attempted by the same thread; the caller can inspect
+`MTH_IsOperationInProgressOnThisThread` before taking its own external locks.
 
-- **v1.3.1 - 19 Mar 2015**
-  * No major changes from v1.3.1-beta.
+The original-call pointer produced by creation is a trampoline whose lifetime
+is owned by the created hook. Do not free, cache beyond retirement, or call it
+after successful removal/uninitialization. Disable hooks, stop future original
+calls, drain existing callbacks, and then remove/uninitialize. A failed operation
+can retain physical state and resources for retry; retain the same owner and
+callback context. Do not run engine operations under loader lock.
+See [API](docs/API.md) and [Safety](docs/SAFETY.md).
 
-- **v1.3.1-beta - 11 Mar 2015**
-  * Added a helper function ```MH_CreateHookApi```. (Thanks to uniskz).
-  * Fixed a false memory leak reported by some tools.
-  * Fixed a degradated compatibility issue.
+## Portable checks
 
-- **v1.3 - 13 Sep 2014**
-  * No major changes from v1.3-beta3.
+Linux builds the actual x64 decoder/relocator with development-only projected
+Windows memory-query boundaries. It does not execute Windows patching,
+suspension, callbacks or native DLL teardown.
 
-- **v1.3-beta3 - 31 Jul 2014**
-  * Fixed some small bugs.
-  * Improved the memory management.
+```sh
+python3 scripts/verify_sources.py
+cmake -S . -B build/portable -DCMAKE_BUILD_TYPE=Debug -DMITHRILHOOK_SANITIZERS=ON
+cmake --build build/portable
+UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/portable --output-on-failure
+```
 
-- **v1.3-beta2 - 21 Jul 2014**
-  * Changed the parameters to Windows-friendly types. (void* to LPVOID)
-  * Fixed some small bugs.
-  * Reorganized the source files.
-  * Reduced the footprint a little more.
+The GitHub workflow provides genuine MSVC x86/x64 Debug/Release, a shared x64
+build, clang-cl x64 and portable checks. Configuration is not a test result.
 
-- **v1.3-beta - 17 Jul 2014**
-  * Rewrote in plain C to reduce the footprint and memory usage. (suggested by Andrey Unis)
-  * Simplified the overall code base to make it more readable and maintainable.
-  * Changed the license from 3-clause to 2-clause BSD License.
+## Provenance and licenses
 
-- **v1.2 - 28 Sep 2013**
-  * Removed boost dependency ([jarredholman](https://github.com/jarredholman/minhook)).
-  * Fixed a small bug in the GetRelativeBranchDestination function ([pillbug99](http://www.codeproject.com/Messages/4058892/Small-Bug-Found.aspx)).
-  * Added the ```MH_RemoveHook``` function, which removes a hook created with the ```MH_CreateHook``` function.
-  * Added the following functions to enable or disable multiple hooks in one go: ```MH_QueueEnableHook```, ```MH_QueueDisableHook```, ```MH_ApplyQueued```. This is the preferred way of handling multiple hooks as every call to `MH_EnableHook` or `MH_DisableHook` suspends and resumes all threads.
-  * Made the functions ```MH_EnableHook``` and ```MH_DisableHook``` enable/disable all created hooks when the ```MH_ALL_HOOKS``` parameter is passed. This, too, is an efficient way of handling multiple hooks.
-  * If the target function is too small to be patched with a jump, MinHook tries to place the jump above the function. If that fails as well, the ```MH_CreateHook``` function returns ```MH_ERROR_UNSUPPORTED_FUNCTION```. This fixes an issue of hooking the LoadLibraryExW function on Windows 7 x64 ([reported by Obble](http://www.codeproject.com/Messages/4578613/Re-Bug-LoadLibraryExW-hook-fails-on-windows-2008-r.aspx)).
+Official source: [TsudaKageyu/minhook](https://github.com/TsudaKageyu/minhook),
+commit `8af6b4acae5a9388fd742b56fa79ece89d96f823`.
+Strict ownership contributions come from the pinned cyanoleon SAFE-FREEZE
+candidate; relocation hardening and selected tests come from Citrine PR #363.
+Exact revisions and changes are in [PROVENANCE.json](metadata/PROVENANCE.json)
+and [FIXES.json](metadata/FIXES.json).
 
-- **v1.1 - 26 Nov 2009**
-  * Changed the interface to create a hook and a trampoline function in one go to prevent the detour function from being called before the trampoline function is created. ([reported by xliqz](http://www.codeproject.com/Messages/3280374/Unsafe.aspx))
-  * Shortened the function names from ```MinHook_*``` to ```MH_*``` to make them handier.
-
-- **v1.0 - 22 Nov 2009**
-  * Initial release.
-
-### Building MinHook - Using vcpkg
-
-You can download and install MinHook using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
-
-    git clone https://github.com/microsoft/vcpkg
-    .\vcpkg\bootstrap-vcpkg.bat
-    .\vcpkg\vcpkg integrate install
-    .\vcpkg\vcpkg install minhook
-
-The MinHook port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+The current combined distribution and fork additions use **GPL-3.0-only**,
+retaining the original MinHook/HDE and separately authorized SAFE-FREEZE BSD
+notices. Read [LICENSE](LICENSE), [LICENSE.txt](LICENSE.txt),
+[LICENSE.SAFE_FREEZE](LICENSE.SAFE_FREEZE) and
+[THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). No existing third-party
+copyright or grant is removed or silently reassigned.

@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  MinHook - The Minimalistic API Hooking Library for x64/x86
  *  Copyright (C) 2009-2017 Tsuda Kageyu.
  *  All rights reserved.
@@ -102,4 +102,4 @@ typedef struct _TRAMPOLINE
     UINT8  newIPs[8];       // [Out] Instruction boundaries of the trampoline function.
 } TRAMPOLINE, *PTRAMPOLINE;
 
-BOOL CreateTrampolineFunction(PTRAMPOLINE ct);
+BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct);

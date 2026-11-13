@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Hacker Disassembler Engine 64 C
  * Copyright (c) 2008-2009, Vyacheslav Patkov.
  * All rights reserved.
@@ -9,17 +9,38 @@
 
 #include <string.h>
 #include "hde64.h"
+
+/* MithrilHook: memcpy permits instruction/table reads at any byte alignment. */
+static uint16_t mth_read_u16(const void *address)
+{
+    uint16_t value;
+    memcpy(&value, address, sizeof(value));
+    return value;
+}
+static uint32_t mth_read_u32(const void *address)
+{
+    uint32_t value;
+    memcpy(&value, address, sizeof(value));
+    return value;
+}
+static uint64_t mth_read_u64(const void *address)
+{
+    uint64_t value;
+    memcpy(&value, address, sizeof(value));
+    return value;
+}
+
 #include "table64.h"
 
 /* An instruction is at most 15 bytes long, so the bytes past that may not be
  * mapped: a decode that would run over the limit stops instead of reading. */
 #define NEED(n) do { if (limit - p < (n)) goto error_length; } while (0)
 
-unsigned int hde64_disasm(const void *code, hde64s *hs)
+unsigned int MthInternal_hde64_disasm(const void *code, hde64s *hs)
 {
     uint8_t x, c, *p = (uint8_t *)code, cflags, opcode, pref = 0, mand = 0;
     uint8_t map0f = 0;          /* the opcode came from the 0F map */
-    uint8_t *ht = hde64_table, m_mod, m_reg, m_rm, disp_size = 0;
+    uint8_t *ht = mth_hde64_table, m_mod, m_reg, m_rm, disp_size = 0;
     uint8_t op64 = 0, rex = 0, rex2 = 0, have_rex2 = 0, ext = 0;
     uint8_t *limit = (uint8_t *)code + 15;
 
@@ -271,13 +292,13 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
     x = 0;
     if (cflags & C_GROUP) {
         uint16_t t;
-        t = *(uint16_t *)(ht + (cflags & 0x7f));
+        t = mth_read_u16(ht + (cflags & 0x7f));
         cflags = (uint8_t)t;
         x = (uint8_t)(t >> 8);
     }
 
     if (map0f) {
-        ht = hde64_table + DELTA_PREFIXES;
+        ht = mth_hde64_table + DELTA_PREFIXES;
         /* movntsd and movntss are F2 0F 2B and F3 0F 2B. The row 0F 2B
          * reads rejects both, and it is shared with a neighbour that has
          * no such form, so the exception lives here rather than in the
@@ -309,10 +330,10 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
         if (!map0f && opcode >= 0xd9 && opcode <= 0xdf) {
             uint8_t t = opcode - 0xd9;
             if (m_mod == 3) {
-                ht = hde64_table + DELTA_FPU_MODRM + t*8;
+                ht = mth_hde64_table + DELTA_FPU_MODRM + t*8;
                 t = ht[m_reg] << m_rm;
             } else {
-                ht = hde64_table + DELTA_FPU_REG;
+                ht = mth_hde64_table + DELTA_FPU_REG;
                 t = ht[t] << m_reg;
             }
             if (t & 0x80)
@@ -325,10 +346,10 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
             } else {
                 uint8_t *table_end, op = opcode;
                 if (map0f) {
-                    ht = hde64_table + DELTA_OP2_LOCK_OK;
+                    ht = mth_hde64_table + DELTA_OP2_LOCK_OK;
                     table_end = ht + DELTA_OP_ONLY_MEM - DELTA_OP2_LOCK_OK;
                 } else {
-                    ht = hde64_table + DELTA_OP_LOCK_OK;
+                    ht = mth_hde64_table + DELTA_OP_LOCK_OK;
                     table_end = ht + DELTA_OP2_LOCK_OK - DELTA_OP_LOCK_OK;
                     op &= -2;
                 }
@@ -377,10 +398,10 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
         if (m_mod == 3) {
             uint8_t *table_end;
             if (map0f) {
-                ht = hde64_table + DELTA_OP2_ONLY_MEM;
-                table_end = ht + sizeof(hde64_table) - DELTA_OP2_ONLY_MEM;
+                ht = mth_hde64_table + DELTA_OP2_ONLY_MEM;
+                table_end = ht + sizeof(mth_hde64_table) - DELTA_OP2_ONLY_MEM;
             } else {
-                ht = hde64_table + DELTA_OP_ONLY_MEM;
+                ht = mth_hde64_table + DELTA_OP_ONLY_MEM;
                 table_end = ht + DELTA_OP2_ONLY_MEM - DELTA_OP_ONLY_MEM;
             }
             for (; ht != table_end; ht += 2)
@@ -458,7 +479,7 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
                 hs->disp.disp8 = *p;
             } else {
                 hs->flags |= F_DISP32;
-                hs->disp.disp32 = *(uint32_t *)p;
+                hs->disp.disp32 = mth_read_u32(p);
             }
             p += disp_size;
         }
@@ -472,7 +493,7 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
             if ((pref & PRE_66) && !hs->rex_w) {
                 NEED(2);
                 hs->flags |= F_IMM16 | F_RELATIVE;
-                hs->imm.imm16 = *(uint16_t *)p;
+                hs->imm.imm16 = mth_read_u16(p);
                 p += 2;
                 goto disasm_done;
             }
@@ -481,12 +502,12 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
         if (op64) {
             NEED(8);
             hs->flags |= F_IMM64;
-            hs->imm.imm64 = *(uint64_t *)p;
+            hs->imm.imm64 = mth_read_u64(p);
             p += 8;
         } else if (!(pref & PRE_66) || hs->rex_w) {
             NEED(4);
             hs->flags |= F_IMM32;
-            hs->imm.imm32 = *(uint32_t *)p;
+            hs->imm.imm32 = mth_read_u32(p);
             p += 4;
         } else
             goto imm16_ok;
@@ -497,7 +518,7 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
       imm16_ok:
         NEED(2);
         hs->flags |= F_IMM16;
-        hs->imm.imm16 = *(uint16_t *)p;
+        hs->imm.imm16 = mth_read_u16(p);
         p += 2;
     }
     if (cflags & C_IMM8) {
@@ -513,7 +534,7 @@ unsigned int hde64_disasm(const void *code, hde64s *hs)
       rel32_ok:
         NEED(4);
         hs->flags |= F_IMM32 | F_RELATIVE;
-        hs->imm.imm32 = *(uint32_t *)p;
+        hs->imm.imm32 = mth_read_u32(p);
         p += 4;
     } else if (cflags & C_REL8) {
         NEED(1);

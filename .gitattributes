@@ -1,0 +1,7 @@
+# Stable source bytes for the inventory on Linux and Windows checkouts.
+* text=auto eol=lf
+*.zip binary
+*.bundle binary
+*.png binary
+*.dll binary
+*.exe binary

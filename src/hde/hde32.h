@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Hacker Disassembler Engine 32
  * Copyright (c) 2006-2009, Vyacheslav Patkov.
  * All rights reserved.
@@ -96,7 +96,7 @@ extern "C" {
 #endif
 
 /* __cdecl */
-unsigned int hde32_disasm(const void *code, hde32s *hs);
+unsigned int MthInternal_hde32_disasm(const void *code, hde32s *hs);
 
 #ifdef __cplusplus
 }
