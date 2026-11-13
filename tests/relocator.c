@@ -52,6 +52,74 @@ static void byte_alias_cases(BYTE *code)
       check(!MthInternal_IsUnwindNeutralInstruction(code,sizeof(word),5),"word BP write remains protected"); }
 }
 
+static void internal_branch_cases(BYTE *source, BYTE *trampoline)
+{
+    UINT expanded, kind, prefix, target;
+    const BYTE prefixes[] = {0, 0x2e, 0x67, 0x66};
+    const UINT destinations[] = {0, 2, 3, 4};
+    for (expanded = 0; expanded < 2; ++expanded)
+    for (kind = 0; kind < 38; ++kind)
+    for (prefix = 0; prefix < sizeof(prefixes); ++prefix)
+    for (target = 0; target < sizeof(destinations)/sizeof(destinations[0]); ++target)
+    {
+        TRAMPOLINE ct;
+        UINT n = 4, width = kind < 21 ? 1 : 4;
+        INT32 displacement, actual;
+        UINT branchNew = expanded ? 18 : 4;
+        UINT targetNew = expanded && destinations[target] ? destinations[target] + 14 : destinations[target];
+        if (prefix == 3 && width == 4) continue; /* Separate 66-near refusal contract. */
+        memset(source, 0x90, 256);
+        if (expanded) { source[0] = 0x74; source[1] = 30; }
+        if (prefix) source[n++] = prefixes[prefix];
+        if (kind < 16) source[n++] = (BYTE)(0x70 + kind);
+        else if (kind == 16) source[n++] = 0xeb;
+        else if (kind < 21) source[n++] = (BYTE)(0xe0 + kind - 17);
+        else if (kind < 37) { source[n++] = 0x0f; source[n++] = (BYTE)(0x80 + kind - 21); }
+        else source[n++] = 0xe9;
+        displacement = (INT32)destinations[target] - (INT32)(n + width);
+        if (width == 1) source[n] = (BYTE)(INT8)displacement;
+        else memcpy(source + n, &displacement, 4);
+        n += width;
+        memset(&ct, 0, sizeof(ct));
+        ct.pTarget = source; ct.pTrampoline = trampoline; ct.pDetour = source + 128;
+        check(MthInternal_CreateTrampolineFunction(&ct), "accept mapped internal JMP/Jcc/LOOP layout");
+        actual = 0;
+        if (width == 1) actual = (INT8)trampoline[branchNew + n - 4 - 1];
+        else memcpy(&actual, trampoline + branchNew + n - 4 - width, 4);
+        check((INT32)(branchNew + n - 4) + actual == (INT32)targetNew,
+            "internal branch resolves to its relocated instruction boundary");
+        check(!memcmp(source + 4, trampoline + branchNew, n - 4 - width),
+            "internal fixup preserves prefixes and branch opcode");
+    }
+    {
+        TRAMPOLINE ct;
+        const BYTE loop[] = {0x74, 6, 0xff, 0xc1, 0x75, 0xfa, 0x90, 0x90, 0xb8, 42, 0, 0, 0, 0xc3};
+        memcpy(source, loop, sizeof(loop));
+        memset(&ct, 0, sizeof(ct)); ct.pTarget = source; ct.pTrampoline = trampoline; ct.pDetour = source + 128;
+        check(MthInternal_CreateTrampolineFunction(&ct), "accept exact review-13 loop");
+        check(trampoline[18] == 0x75 && (INT8)trampoline[19] == -20,
+            "review-13 backward JNE returns to trampoline start rather than address data");
+        source[5] = 0xfb; /* source+1: the first JE's immediate byte. */
+        check(!MthInternal_CreateTrampolineFunction(&ct), "refuse an internal target inside a decoded Jcc");
+        source[5] = 0xfd; /* source+3: INC's ModR/M byte. */
+        check(!MthInternal_CreateTrampolineFunction(&ct), "refuse an internal target inside a decoded INC");
+    }
+    {
+        TRAMPOLINE ct;
+        const BYTE forward[] = {0xeb, 2, 0x90, 0x90, 0x90, 0xc3};
+        memset(source, 0x90, 64); memcpy(source, forward, sizeof(forward));
+        memset(&ct, 0, sizeof(ct)); ct.pTarget = source; ct.pTrampoline = trampoline; ct.pDetour = source + 128;
+        check(MthInternal_CreateTrampolineFunction(&ct) && trampoline[0] == 0xeb && trampoline[1] == 2,
+            "preserve plain forward internal branch control");
+        source[0] = 0x74; source[1] = 30; source[2] = 0xeb; source[3] = 0;
+        check(MthInternal_CreateTrampolineFunction(&ct) && trampoline[16] == 0xeb && trampoline[17] == 0,
+            "preserve a forward internal target after an earlier expansion");
+        source[0] = 0xeb; source[1] = 2; source[2] = 0x74; source[3] = 28;
+        check(!MthInternal_CreateTrampolineFunction(&ct),
+            "retain conservative refusal of length changes inside a pending forward span");
+    }
+}
+
 int main(void)
 {
     SYSTEM_INFO info;
@@ -86,6 +154,7 @@ int main(void)
     check(!memcmp(code+512,vex,5), "preserve VEX instruction instead of emitting Jcc");
     memcpy(code+64,xbegin,sizeof xbegin);
     check(!MthInternal_CreateTrampolineFunction(&ct), "refuse unhandled relative XBEGIN");
+    internal_branch_cases(code + 64, code + 512);
     {
         const BYTE load[]={0x48,0x8b,0x44,0x24,0x60};
         const BYTE stack[]={0x48,0x83,0xec,0x38};

@@ -35,6 +35,14 @@ are refused, not emulated with stack operations that bypass control-flow
 mitigations. Ordinary relative CALL remains supported within the documented
 scope; general return-address introspection is not preserved by relocation.
 
+Relative JMP/Jcc/LOOP destinations inside the five-byte patch interval are
+resolved through the completed old-to-new instruction-boundary map. This
+preserves backward targets after earlier instruction expansion. Destinations
+inside another decoded instruction are unsupported. Existing conservative
+refusal of instruction growth inside a pending forward span remains in force;
+this does not introduce arbitrary overlapping-instruction or whole-body CFG
+relocation support.
+
 MTH_ALL_HOOKS selects the owned set for the documented enable/disable/queue
 operations. Removal remains target-specific; uninitialize retires the complete
 engine after the required quiescence. An already initialized engine must not be

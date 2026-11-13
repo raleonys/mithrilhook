@@ -115,6 +115,11 @@
       "id": "F23",
       "change": "Refuse unsupported copied REX2/APX forms and any inferred unwind-neutral APX instruction",
       "origin": "MithrilHook review #11; decoder recognition does not establish a complete APX register/unwind contract"
+    },
+    {
+      "id": "F24",
+      "change": "Resolve internal JMP/Jcc/LOOP displacements through the completed instruction map; refuse unmapped boundaries and preserve forward-span growth refusals",
+      "origin": "MithrilHook review #13; inherited backward-branch offset corruption after an earlier Jcc expansion"
     }
   ],
   "excluded_unreviewed_proposals": {
