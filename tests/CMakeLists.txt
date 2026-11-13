@@ -48,6 +48,10 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set_tests_properties(mithrilhook_relocator_contracts PROPERTIES TIMEOUT 30)
 endif()
 # Exact-assertion controls are generated under the build tree, never in src/.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  ${PROJECT_SOURCE_DIR}/src/hook.c
+  ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py
+  ${PROJECT_SOURCE_DIR}/metadata/SOURCE_MANIFEST.json)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py prepare --output ${CMAKE_CURRENT_BINARY_DIR}/controls RESULT_VARIABLE result)
 if(NOT result EQUAL 0)
   message(FATAL_ERROR "MithrilHook negative control preparation failed")
