@@ -11,11 +11,15 @@ MithrilHook is an independently maintained Windows x86/x64 function-hooking
 library derived from MinHook. It has its own **MTH_*** API, build targets,
 package identity and version history. There is no legacy API alias header.
 
-This initial development candidate integrates strict peer preparation,
+This development candidate integrates strict peer preparation,
 retryable patch completion, generated-code retirement checks and checked
 instruction relocation. **It is not a production acceptance or universal
 unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
+
+The current merged runtime passed 146 native Windows tests and two portable
+sanitizer tests. Comparative hook-engine performance remains unmeasured; see
+[Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 
 ## What is included
 

@@ -1,8 +1,11 @@
 # Thread coverage, partial batches and x64 unwind audit
 
-Base: accepted master `742d6a7685a6c8c71f8210d8ea35f731e2864b28`.
-The scope is the engine before application integration. Native execution,
-source inspection, cross-builds and application acceptance remain distinct.
+Audit base: accepted master `742d6a7685a6c8c71f8210d8ea35f731e2864b28`.
+PR #3 introduced the thread/batch fixes and a refusal-only unwind guard. PR #4
+added the owned-unwind follow-up and is merged as
+`d32fd189f1459e6f7b70002d1483ada78342f055`. This document distinguishes those
+stages; [Validation](VALIDATION.md) records their exact native results. The
+scope is the engine before application integration.
 
 ## Preparation and partial-batch context mismatch
 
@@ -50,34 +53,53 @@ No loader-lock acquisition, fixed PEB offset or universal barrier is claimed.
 
 ## x64 runtime-function and unwind metadata
 
-The trampoline has no synthesized RUNTIME_FUNCTION entry. A relocated push or
-stack allocation can therefore be mistaken for a leaf frame during unwinding,
-losing the return-address and nonvolatile-register restoration described by the
-source function's metadata. Source language-handler scopes also do not transfer
-merely by copying instructions.
+### Historical PR #3 guard
 
-Creation checks registered targets using RtlLookupFunctionEntry and bounded
-ReadProcessMemory reads. It refuses nonleaf interior entries, version/flag forms
-outside the supported subset, handler/chained metadata and any unwind operation
-within the bytes actually relocated. Extra unwind-code operand slots are skipped
-according to the operation; they are not mistaken for primary code offsets.
-The jump-back instruction is excluded from the original relocated-byte count.
-No output pointer or hook entry is published for a refused function.
+The initial trampoline had no synthesized RUNTIME_FUNCTION entry. A relocated
+push or stack allocation could therefore be mistaken for a leaf frame during
+unwinding, losing return-address and nonvolatile-register restoration. Source
+language-handler scopes also did not transfer merely by copying instructions.
 
-The native fixture registers a real source RUNTIME_FUNCTION, calls
-RtlVirtualUnwind on a bounded artificial context and proves correct source
-return-address, RSP and RBX restoration. Removing the guard must expose a real
-trampoline without equivalent metadata and report its exact mismatch, followed
-by complete hook/table/allocation/handle cleanup. A neutral-prefix function is
-accepted and checked against the source leaf-unwind behavior. Language-handler
-and interior-entry cases are refused.
+PR #3 checked registered targets using RtlLookupFunctionEntry and bounded
+ReadProcessMemory reads. It refused nonleaf interior entries, unsupported
+versions/flags, handler/chained forms and any unwind operation within the copied
+prefix. Operand payload slots were skipped according to the operation rather
+than interpreted as primary offsets. Refusal published no hook/output pointer.
 
-This deliberately narrows supported x64 targets. A target that previously
-created successfully may now return MTH_ERROR_UNSUPPORTED_FUNCTION. Application
-integration must check all actual hook targets; this audit does not establish
-their compatibility. Unregistered custom code must already obey the Windows
-leaf/unwind registration contract. General generated unwind tables, language
-scope translation and arbitrary unwind support are not implemented.
+Its genuine runtime-function fixture proved source stack/return/RBX restoration;
+the guard-removal control demonstrated the missing trampoline metadata and
+complete hook/table/allocation/handle cleanup. This conservative guard narrowed
+x64 create/remove support to 3/11 targets. That stage was not ready for the
+application's eleven-hook integration.
+
+### Current PR #4 support
+
+The current core generates fixed-address version-2 metadata for a bounded set of
+version-1 source prefixes on Windows 10 and later. It translates only completed
+unwind operations through the actual relocation boundaries and covers the main
+code through the jump-back. Native diagnostics showed that version-1 epilogue
+scanning misclassified FF25 even with an extended prologue or chained fragment;
+version 2 declares no epilogues and restores the expected caller state.
+
+Source chains, interior nonleaf entries, untranslated handler-bearing bodies and
+undescribed stack/frame changes remain refused. Handler-bearing prefixes wholly
+inside the original prologue can be admitted. Unregistered custom code must
+already obey the Windows leaf/unwind registration contract. Older/unknown
+systems retain refusal when generated nonleaf metadata is needed.
+
+Registration and generated-code cache completion precede publication. Metadata
+and code storage remain owned through deletion, publication cleanup and
+memory-release rollback failures. Registry operations run outside engine-owned
+suspensions under the consumer's admission/drain protocol. See
+[Unwind support](UNWIND.md) for the exact subset, slot layout and lifecycle.
+
+The current native fixture checks exact caller stack/return state, RBX/RBP/XMM
+restoration, frame offsets and allocation encodings. Owned source and trampoline
+calls execute, including enable/detour/original/disable behavior. A separate
+native-registry fixture injects ownership/recovery failures with projected peers
+and verifies that registry calls never occur during owned suspension. The
+missing-metadata negative control still requires its precise mismatch and
+complete cleanup; unrelated crashes/timeouts are not accepted.
 
 References:
 
@@ -86,15 +108,18 @@ References:
 
 ## Validation and related asset change
 
-The workflow registers 23 tests on x64 and 18 on Win32, across seven native
-configurations, plus the two portable decoder/relocator tests. Results must be
-read for the exact PR head; configured or cross-built tests are not native PASS.
+The current workflow registers 23 tests on x64 and 18 on Win32, across seven
+native configurations: 146 native executions plus two portable tests. The merged
+PR #4 source passed [run 43456198204](https://github.com/raleonys/mithrilhook/actions/runs/43456198204).
+These are correctness results, not comparative performance measurements. See
+[Benchmarks](BENCHMARKS.md) and [Remaining work](REMAINING_WORK.md).
 
 The target probe reports create/remove compatibility for the application's eleven
 modern-Windows API names, without enabling a hook or executing its target or
-trampoline. Its supported/refused status checks and unchanged-byte checks can
-pass while individual targets remain unsupported. The per-target results must
-be reviewed before integration; the probe is not eleven-hook acceptance.
+trampoline. The historical PR #3 probe allowed individual unsupported
+classifications to pass. The current production probe requires all eleven targets to be accepted
+and fails on any refusal. All seven native cells accept 11/11 in the merged
+PR #4 run. This is create/remove compatibility, not live eleven-hook acceptance.
 
 Initial native audit head `00c5f9a7cc4bfed1517a43e9dd9df9d8eaef2b93` passed
 138 native test executions and two portable tests in run
