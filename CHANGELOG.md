@@ -5,6 +5,11 @@ There is no published release or release tag. The CMake project version is
 
 ## Unreleased
 
+- Refuse ambiguous 66-prefixed near CALL/JMP/Jcc forms before publishing a
+  trampoline; preserve ordinary unprefixed branch behavior.
+- Normalize AH/CH/DH/BH and REX byte destinations in the unwind-neutral filter,
+  preserving unrelated byte writes while rejecting protected frame changes.
+
 - Correct stale unmerged/native-pending wording and link exact source revisions
   to their completed Windows validation.
 - Separate the refusal-only unwind audit from the later generated-metadata
