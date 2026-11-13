@@ -40,6 +40,13 @@ jobs:
       - run: cmake -S . -B build/native -A ${{ matrix.arch }} -T ${{ matrix.toolset }} -DBUILD_SHARED_LIBS=${{ matrix.shared }} -DBUILD_TESTING=ON
       - run: cmake --build build/native --config ${{ matrix.config }} --parallel 2
       - run: ctest --test-dir build/native -C ${{ matrix.config }} --output-on-failure --output-junit native.xml
+      - name: Report target compatibility classifications
+        shell: python
+        run: |
+          from pathlib import Path
+          for line in Path('build/native/Testing/Temporary/LastTest.log').read_text(errors='replace').splitlines():
+              if line.startswith(('TARGET_PROBE', 'TARGET_COMPARISON')):
+                  print(line)
       - run: cmake --install build/native --config ${{ matrix.config }} --prefix dist/install
       - if: matrix.shared == 'ON'
         run: python scripts/verify_dll.py build/native/Release/mithrilhook.dll

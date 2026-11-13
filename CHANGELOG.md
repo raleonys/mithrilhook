@@ -10,6 +10,8 @@
   language handlers or chained metadata that the trampoline does not provide.
 - Add deterministic failure cases, genuine runtime-function/unwind checks and
   precise reconciliation/coverage/unwind negative controls.
+- Report the eleven create-only target classifications and compare x64 results
+  with the unwind guard removed; unsupported targets remain integration blockers.
 - Apply the approved five-pixel logo alignment without regenerating the artwork.
 - Established an independent MTH API, MithrilHook package/DLL identity and CMake
   target; removed the legacy compatibility header and inherited build products.

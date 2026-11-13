@@ -86,7 +86,7 @@ References:
 
 ## Validation and related asset change
 
-The workflow registers 21 tests on x64 and 18 on Win32, across seven native
+The workflow registers 22 tests on x64 and 18 on Win32, across seven native
 configurations, plus the two portable decoder/relocator tests. Results must be
 read for the exact PR head; configured or cross-built tests are not native PASS.
 
@@ -95,6 +95,21 @@ modern-Windows API names, without enabling a hook or executing its target or
 trampoline. Its supported/refused status checks and unchanged-byte checks can
 pass while individual targets remain unsupported. The per-target results must
 be reviewed before integration; the probe is not eleven-hook acceptance.
+
+Initial native audit head `00c5f9a7cc4bfed1517a43e9dd9df9d8eaef2b93` passed
+138 native test executions and two portable tests in run
+https://github.com/raleonys/mithrilhook/actions/runs/43441584117.
+The MSVC Release artifact reports x64 create/remove support for `connect`,
+`SHGetFolderPathA` and `SHGetFolderPathW`; the five registry functions,
+`CreateProcessA/W` and `CryptQueryObject` were refused. Win32 accepted all eleven.
+This means the current x64 candidate is **not ready for eleven-hook integration**.
+
+The x64 comparison fixture now also runs the same create-only probe against the
+precisely guard-removed engine. It reports which refusals are introduced by the
+unwind check rather than attributing every unsupported function to it by
+assumption. Both probe processes must complete their owner cleanup successfully;
+neither enables hooks or claims execution compatibility. Summaries are printed
+in the workflow log as well as retained in the CTest artifact.
 
 The same change includes the owner-approved original-logo alignment. It uses
 the original raster artwork with an integer five-pixel translation, preserves
