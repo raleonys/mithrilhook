@@ -15,6 +15,8 @@
 - Added same-thread reentry detection and diagnostics without a recursive lock.
 - Retained native injected-failure, real-peer, leaf-call, retirement and cleanup
   controls and added a reproducible source inventory.
+- Run feature-branch validation through pull requests and reserve push validation
+  for main branches, avoiding duplicate checks on the same pull-request commit.
 
 This entry describes an unmerged development candidate, not a published stable
 release or native acceptance of the final MithrilHook source.
