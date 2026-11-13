@@ -66,14 +66,17 @@ by their resulting behavior and links the implementing pull requests.
 
 ### Packaging and compatibility
 
+- Replace the master logo with the owner-supplied transparent PNG, preserving
+  its exact bytes and dimensions in README and installed packages. Record the
+  new artwork/archive identity in the branding metadata. ([#20])
 - The installed package exposes version 1.0.2 without a prerelease suffix.
   Numeric requests, including exact 1.0.2, work without prerelease opt-in.
   CMake and Windows fixed metadata use 1.0.2; DLL prerelease flags are clear.
   Static/shared consumers retain their matching MSVC runtime configuration.
 - Distribution remains GPL-3.0-only. Original MinHook/HDE BSD notices and the
   separately authorized SAFE-FREEZE notice remain intact; these are not three
-  alternative licenses for the full fork. Branding and the approved logo are
-  preserved. ([#2])
+  alternative licenses for the full fork. The independent branding identity
+  is retained; the owner-selected 1.0.2 logo is recorded above. ([#2], [#20])
 - Supported instruction and unwind forms are finite. Generated nonleaf metadata
   requires Windows 10 or later; unknown/chained formats and untranslated
   handler-bearing bodies remain refused. Multi-hook writes remain sequential.

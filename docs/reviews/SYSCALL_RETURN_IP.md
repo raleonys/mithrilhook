@@ -128,3 +128,13 @@ The prepared 1.0.1 was not tagged or published. Fresh exact-source Windows,
 package and broad benchmark evidence is recorded in PR #20; earlier records
 keep their actual source identities. Citrine integration remains the next
 separate engineering phase.
+
+## Owner-supplied 1.0.2 logo
+
+The owner supplied a replacement 1536 x 1024 RGBA transparent master as
+mithrilhook.png in mithrilhook.zip. The existing branding path is replaced with
+those exact bytes, so README and installed packages use it. Branding metadata
+records the image/archive hashes and the absence of any transformation. This
+addition changes no runtime engine code or public API. Validation/package
+records for the final head include the new artwork identity; preceding
+measurements keep their original source manifests.
