@@ -14,6 +14,34 @@ static void require(BOOL ok, const char *why)
     if (!ok) { fprintf(stderr, "FAIL: %s\n", why); ExitProcess(1); }
 }
 
+static void diagnose_jump_unwind(DWORD64 *sp,DWORD64 expectedRsp,DWORD64 expectedRip,DWORD64 initialRbx)
+{
+    const BYTE instructions[]={0x53,0x48,0x83,0xec,0x20,0xff,0x25,0,0,0,0,0,0,0,0,0,0,0,0};
+    const BYTE unwind[]={1,19,2,0,5,0x32,1,0x30};
+    BYTE *arena=VirtualAlloc(NULL,4096,MEM_RESERVE|MEM_COMMIT,PAGE_EXECUTE_READWRITE);
+    UINT mode;
+    if(!arena)return;
+    memcpy(arena,instructions,sizeof(instructions));memcpy(arena+64,unwind,sizeof(unwind));
+    for(mode=0;mode<4;++mode)
+    {
+        RUNTIME_FUNCTION function={0,19,64};CONTEXT context;PVOID handler;DWORD64 frame;
+        memset(&context,0,sizeof(context));context.ContextFlags=CONTEXT_FULL;
+        context.Rip=(DWORD64)(ULONG_PTR)(arena+5);context.Rsp=(DWORD64)(ULONG_PTR)sp;context.Rbx=initialRbx;
+        arena[64]=mode==1?2:1;
+        if(mode>=2)
+        {
+            RUNTIME_FUNCTION parent={0,5,64};
+            function.BeginAddress=5;function.UnwindData=128;
+            arena[128]=33;arena[129]=mode==2?0:14;arena[130]=arena[131]=0;
+            memcpy(arena+132,&parent,sizeof(parent));
+        }
+        (void)RtlVirtualUnwind(0,(DWORD64)(ULONG_PTR)arena,context.Rip,&function,&context,&handler,&frame,NULL);
+        fprintf(stderr,"UNWIND_VARIANT mode=%u rip_match=%u rsp_delta=%lld rbx=%llu\n",mode,
+            (unsigned)(context.Rip==expectedRip),(long long)(context.Rsp-expectedRsp),(unsigned long long)context.Rbx);
+    }
+    require(VirtualFree(arena,0,MEM_RELEASE),"retire disposable unwind diagnostic arena");
+}
+
 static void verify_generated_unwind(BYTE *pc,DWORD64 *sp,DWORD64 expectedRsp,DWORD64 expectedRip,DWORD64 expectedRbx,DWORD64 initialRbx)
 {
     CONTEXT context;
@@ -34,6 +62,7 @@ static void verify_generated_unwind(BYTE *pc,DWORD64 *sp,DWORD64 expectedRsp,DWO
         fprintf(stderr,"UNWIND_INFO rva=%lu end=%lu bytes=%02x%02x%02x%02x%02x%02x%02x%02x\n",
             (unsigned long)function->UnwindData,(unsigned long)function->EndAddress,
             info[0],info[1],info[2],info[3],info[4],info[5],info[6],info[7]);
+        diagnose_jump_unwind(sp,expectedRsp,expectedRip,initialRbx);
     }
     require(context.Rip==expectedRip && context.Rsp==expectedRsp && context.Rbx==expectedRbx,
         "generated unwind restores the exact caller stack, return address and nonvolatile register");

@@ -58,7 +58,7 @@
     "tests/native/real_peer.cpp": "b6f28ded82f784235cdc7f44f8d9ed7c4d31c6bf1a7271d5c19612aa033a1345",
     "tests/native/retirement_peer.cpp": "0ad107857f8a55788c6224feb233ed68010fbebe16c86f2e527d9a43062e6e84",
     "tests/native/target_probe.c": "5700c238764ddaef7b9fe26b3f613745013fe4b0021850254331a749f2814089",
-    "tests/native/unwind.c": "fb97596701182340a7bcbd386573f0cb5a191b5fb4d0128a5c46d27204e7b3ab",
+    "tests/native/unwind.c": "3b7773aef410144b20230a1e331822cfe01d28c108ba72e7177e105eab455df0",
     "tests/native/unwind_failures.c": "3ad0e2e1c35681d81470e527eb631878828be296358ad2842b0f8e5023d51372",
     "tests/portable/windows.h": "6a60cb103cf8d52e2de54fed1be79d5e2ca09822d0fca54344ffc80cab89345a",
     "tests/portable/windows_stub.c": "f7130ec7de367d75ff5102dfce592a5020ae61f3eca159fbc18030f6127af2e1",
