@@ -18,7 +18,7 @@ unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
 
 The current merged runtime passed 146 native Windows tests and two portable
-sanitizer tests. Comparative hook-engine performance remains unmeasured; see
+sanitizer tests. Native hook-engine comparisons retain source-specific reports and raw evidence; see
 [Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 
 ## What is included

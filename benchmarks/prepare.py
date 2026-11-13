@@ -37,5 +37,5 @@ def prepare():
  for path in sorted(prepared.rglob('*')):
   if path.is_file() and path.name!='inputs.json':receipt['files'][str(path.relative_to(ROOT))]=sha(path)
  (prepared/'inputs.json').write_text(json.dumps(receipt,indent=2)+'\n')
- print('PASS: six immutable external inputs and exact SAFE-FREEZE/Citrine relocation baseline')
+ print('PASS: seven immutable external inputs and exact SAFE-FREEZE/Citrine relocation baseline')
 if __name__=='__main__':prepare()

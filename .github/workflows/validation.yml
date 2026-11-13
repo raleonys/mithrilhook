@@ -50,6 +50,10 @@ jobs:
       - run: cmake --install build/native --config ${{ matrix.config }} --prefix dist/install
       - if: matrix.shared == 'ON'
         run: python scripts/verify_dll.py build/native/Release/mithrilhook.dll
+      - name: Configure installed-package consumer
+        run: cmake -S tests/package -B build/package-consumer -A ${{ matrix.arch }} -T ${{ matrix.toolset }} -DCMAKE_PREFIX_PATH="${{ github.workspace }}/dist/install"
+      - run: cmake --build build/package-consumer --config ${{ matrix.config }} --parallel 2
+      - run: ctest --test-dir build/package-consumer -C ${{ matrix.config }} --output-on-failure --output-junit package.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,4 +61,6 @@ jobs:
           path: |
             build/native/native.xml
             build/native/Testing/Temporary/LastTest.log
+            build/package-consumer/package.xml
+            build/package-consumer/Testing/Temporary/LastTest.log
             dist/install

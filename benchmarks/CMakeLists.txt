@@ -48,6 +48,7 @@ function(minhook_candidate name kind directory)
 endfunction()
 minhook_candidate(mithrilhook MTH "${REPO_ROOT}")
 minhook_candidate(official MH "${SOURCES}/official")
+minhook_candidate(official_current MH "${SOURCES}/official_current")
 minhook_candidate(patched MH "${PREPARED}/patched")
 target_compile_definitions(core_patched PRIVATE MH_SAFE_FREEZE=1)
 minhook_candidate(m417z MH "${SOURCES}/m417z")
@@ -69,3 +70,13 @@ target_compile_options(core_slim PRIVATE "/FI${CMAKE_CURRENT_SOURCE_DIR}/nt_head
 candidate(mhd MHD "${SOURCES}/mhd" "${SOURCES}/mhd/src/MinHook.c" ${MHD_C})
 target_include_directories(core_mhd PRIVATE "${SOURCES}/mhd/src/phnt")
 target_compile_options(core_mhd PRIVATE "/FI${CMAKE_CURRENT_SOURCE_DIR}/nt_headers.h")
+# Extended OS coverage of actual application API names, without enabling hooks.
+# The existing production validation keeps its strict 11/11 Windows-2022 gate;
+# this broader probe records explicit refusals on other OS builds as gaps.
+add_executable(api_mithrilhook "${REPO_ROOT}/tests/native/target_probe.c")
+target_include_directories(api_mithrilhook PRIVATE "${REPO_ROOT}/include")
+target_compile_definitions(api_mithrilhook PRIVATE _WIN32_WINNT=0x0A00 NOMINMAX)
+target_compile_options(api_mithrilhook PRIVATE "/FI${CMAKE_CURRENT_BINARY_DIR}/identity.h")
+target_link_libraries(api_mithrilhook PRIVATE core_mithrilhook)
+add_custom_command(TARGET api_mithrilhook POST_BUILD
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/receipt.py" "$<TARGET_FILE:api_mithrilhook>" "${SOURCE_DIGEST}" "${INPUT_DIGEST}" "${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}" "${BENCH_BITS}")

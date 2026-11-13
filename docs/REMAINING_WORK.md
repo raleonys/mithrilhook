@@ -6,6 +6,10 @@ application. A release candidate can be used for early integration feedback.
 No tag or release is created without owner direction.
 
 The scoped core changes F01–F19 are implemented and merged through PR #4.
+Review findings #7/#8 require runtime changes, not just their documentation:
+F20/F21 are implemented in PR #9 and passed 153 native executions at its recorded
+head. They remain a stable-release blocker until owner review/merge. The
+benchmark candidate includes those same corrected runtime bytes.
 The exact native result and source revision are recorded in
 [Validation](VALIDATION.md). There is no published stable release. Repository
 issues are disabled; an empty open-issue/PR list does not close the work below.
@@ -14,11 +18,11 @@ issues are disabled; an empty open-issue/PR list does not close the work below.
 
 | Item | Current evidence | Completion criterion |
 | --- | --- | --- |
-| Comparative hook-engine performance | NOT MEASURED; no retained paired timing suite/results | Implement the separate adapters and correctness gates in [Benchmarks](BENCHMARKS.md), then retain identified native raw results and analysis for the selected baselines. |
+| Comparative hook-engine performance | The eight-engine native suite covers 38 workloads, five environments, seven paired rounds and source/unwind probes | Review the exact-head raw artifacts and recomputed comparisons in [Benchmarks](BENCHMARKS.md); preserve semantic/retirement differences and deployment gaps when selecting release scope. |
 | Citrine integration | The core is independent; the application still uses its existing adapter/vendor input | Integrate the MTH API/package deliberately, preserve closed original-call admission and module ownership through failures, and validate every actual target on the identified host. |
 | Application/game lifecycle acceptance | Controlled engine fixtures and eleven create/remove targets pass; actual Windows API hooks are not enabled by that probe | Observe named-host startup, live detour/original behavior, partial-failure recovery, shutdown and DLL unload with callbacks drained and all owners retired. |
-| Deployment Windows/CPU matrix | Native CI is Windows Server 2022 x64/Win32; generated nonleaf metadata requires Windows 10 or later | Record the supported deployment builds/CPUs and execute the relevant compatibility, unwind and lifecycle cases there. Version-sensitive API prologues must be rechecked. |
-| First stable release | CMake version 0.1.0; no published release/tag | After the independent library correctness, benchmark and package-consumption gates, the owner reviews supported platforms, notices, changelog and evidence and chooses a stable tag/release. Citrine then integrates that immutable version; its game/lifecycle acceptance remains a separate application gate. |
+| Deployment Windows/CPU matrix | Library correctness runs on Windows Server 2022; benchmark/source-form/API observations also cover Server 2025. Generated nonleaf metadata requires Windows 10 or later | Record the supported deployment builds/CPUs and execute the relevant compatibility, unwind and lifecycle cases there. Version-sensitive API prologues must be rechecked. |
+| First stable release | CMake version 0.1.0; no published release/tag; installed-consumer coverage added to every native cell | After the independent library correctness, benchmark and installed-consumer gates, the owner reviews supported platforms, notices, changelog and evidence and chooses a stable tag/release. Citrine then integrates that immutable version; its game/lifecycle acceptance remains a separate application gate. |
 
 Related application issues remain owned by Citrine. In particular,
 [native acceptance #20](https://github.com/raleonys/citrine-eclipse-mirage/issues/20),
@@ -51,6 +55,6 @@ review decisions. #151's loader-lock/fixed-PEB-offset approach is excluded;
 #176 still needs process-handle/error-ownership review before adoption. Their
 existence does not establish an outstanding confirmed defect in this core.
 
-Use this distinction when describing completion: the implemented core scope has
-passed its recorded gates; comparative performance, deployment/application
+Use this distinction when describing completion: each implemented core revision has
+its own recorded gates; confirmed review findings still require reviewed fixes; comparative performance, deployment/application
 acceptance and release publication remain open.

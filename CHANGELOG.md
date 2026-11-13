@@ -10,14 +10,28 @@ There is no published release or release tag. The CMake project version is
 - Normalize AH/CH/DH/BH and REX byte destinations in the unwind-neutral filter,
   preserving unrelated byte writes while rejecting protected frame changes.
 
+- Add a native comparison of eight engines with pinned source/adapter/binary
+  identities, 38 workloads, five OS/architecture/compiler environments, seven
+  paired rounds, steady concurrent callers and separate cold/warm lifecycle data.
+- Exercise the installed CMake package from a separate consumer in all seven
+  native configurations, including static/shared and Debug/Release CRT linkage.
+- Add 29 source-form compatibility cases per engine, real generated-unwind
+  observations, broader eleven-API create/remove coverage, exact corrupted-call
+  controls and offline recomputation of retained raw evidence.
+- Preserve the historical donor benchmark's own source identity and distinguish
+  m417z MinHook from MinHook-Detours. Library stable publication can precede
+  Citrine integration after independent library release gates are met.
+
+## Merged development milestones
+
+### Evidence and open-work documentation — [PR #5](https://github.com/raleonys/mithrilhook/pull/5)
+
 - Correct stale unmerged/native-pending wording and link exact source revisions
   to their completed Windows validation.
 - Separate the refusal-only unwind audit from the later generated-metadata
   implementation so historical behavior is not presented as the current core.
 - Record the missing comparative hook benchmark evidence and distinguish
   remaining acceptance work from documented engineering boundaries.
-
-## Merged development milestones
 
 ### Owned x64 trampoline unwind metadata — [PR #4](https://github.com/raleonys/mithrilhook/pull/4)
 

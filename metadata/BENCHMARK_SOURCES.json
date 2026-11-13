@@ -24,6 +24,11 @@
     "mhd": {
       "repository": "m417z/minhook-detours",
       "commit": "e7d5427ede9e658f1810e742822fab2936e058da"
+    },
+    "official_current": {
+      "repository": "TsudaKageyu/minhook",
+      "commit": "c3fcafdc10146beb5919319d0683e44e3c30d537",
+      "version": "v1.3.4"
     }
   },
   "patched_relocator": {

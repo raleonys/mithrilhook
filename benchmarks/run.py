@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Run isolated native candidates and audit retained samples without executing them."""
-import argparse,collections,copy,hashlib,json,math,os,platform,random,shutil,statistics,subprocess,sys,uuid
+import argparse,collections,copy,hashlib,json,math,os,platform,random,re,shutil,statistics,subprocess,sys,uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 if sys.flags.optimize:raise RuntimeError('The auditor requires Python assertion checks enabled')
-ENGINES=['mithrilhook','official','patched','m417z','detours','slim','mhd']
+ENGINES=['mithrilhook','official','official_current','patched','m417z','detours','slim','mhd']
 CASES=[(hooks,peers,0) for hooks in (1,4,11,32,64) for peers in (0,1,4,16,32,64)]
 CASES += [(hooks,0,callers) for hooks in (1,11) for callers in (1,4,16,64)]
 ROUNDS=7
@@ -30,6 +30,13 @@ def validate_probe(engine,case,result,bits,receipt):
   assert status==('CALL_BEHAVIOR_VERIFIED' if case in PROBE_ACCEPT else 'API_REJECTED'),(case,row)
   if bits==64 and case in {'relative_call','registered_nonleaf','frame_byte_ch'}:assert row['unwind']=='VERIFIED_EXACT_CALLER'
 
+API_TARGETS={'connect','RegOpenKeyExA','RegOpenKeyExW','RegCloseKey','RegQueryValueExA','RegQueryValueExW','CreateProcessA','CreateProcessW','SHGetFolderPathA','SHGetFolderPathW','CryptQueryObject'}
+def normalized(value):
+ if isinstance(value,float):return round(value,8)
+ if isinstance(value,list):return [normalized(item) for item in value]
+ if isinstance(value,dict):return {key:normalized(item) for key,item in value.items()}
+ return value
+
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def unique_pairs(pairs):
  result={}
@@ -50,7 +57,7 @@ def validate_child(entry,receipt):
  assert env['type']=='environment' and env['engine']==entry['engine']
  assert env['source_digest']==receipt['source_digest'] and env['input_digest']==receipt['input_digest']
  assert env['compiler']==receipt['compiler'] and env['bits']==receipt['bits'] and env['bits'] in (32,64)
- assert (env['hooks'],env['peers'],env['callers'])==(entry['hooks'],entry['peers'],entry['callers']) and env['qpc_frequency']>0
+ assert (env['hooks'],env['peers'],env['callers'])==(entry['hooks'],entry['peers'],entry['callers']) and isinstance(env['qpc_frequency'],int) and env['qpc_frequency']>0
  assert env['timer_overhead_ticks']>=0 and env['affinity']>0
  assert end=={'type':'complete','cycles':3,'hooks':entry['hooks'],'peers':entry['peers'],'callers':entry['callers'],'handle_baseline':end['handle_baseline'],'handle_final':end['handle_final'],'errors':0}
  assert end['handle_baseline']==end['handle_final']
@@ -100,7 +107,7 @@ def analyze(entries,receipts,rounds):
  memory=[]
  for (engine,hooks,peers,callers),rows in sorted(resources.items()):
   memory.append({'engine':engine,'hooks':hooks,'peers':peers,'callers':callers,'samples':len(rows),'exec_installed_delta_median':statistics.median(r['exec_installed']-r['exec_before'] for r in rows),'exec_retired_delta_median':statistics.median(r['exec_after']-r['exec_before'] for r in rows),'private_installed_delta_median':statistics.median(r['private_installed']-r['private_before'] for r in rows),'cpu_install_zero_samples':sum(r['cpu_install_100ns']==0 for r in rows),'cpu_remove_zero_samples':sum(r['cpu_remove_100ns']==0 for r in rows)})
- return {'schema':'mithrilhook.benchmark-summary.v1','rounds':rounds,'children':len(entries),'timings':summary,'resources':memory,'limits':['leaf fixtures; idle owned peers; no application/game acceptance','p95/p99 describe batch samples, not individual-call population tails','seven rounds on a hosted VM do not establish cross-host speed superiority','adapter thread and retirement contracts differ; no equivalent-safety ranking']}
+ return normalized({'schema':'mithrilhook.benchmark-summary.v1','rounds':rounds,'children':len(entries),'timings':summary,'resources':memory,'limits':['leaf fixtures; idle owned peers; no application/game acceptance','p95/p99 describe batch samples, not individual-call population tails','seven rounds on a hosted VM do not establish cross-host speed superiority','adapter thread and retirement contracts differ; no equivalent-safety ranking']})
 
 def check_controls():
  # The real child corruption control runs separately under Windows. These
@@ -129,6 +136,13 @@ def audit(output):
   assert sha(output/'binaries'/f'bench_{name}.exe')==receipt['exe_sha256']
   assert receipt['source_digest']==manifest['source_digest'] and receipt['input_digest']==manifest['input_digest'] and receipt['configuration']=='Release'
  assert sha(output/'inputs.json')==manifest['input_digest'] and sha(output/'SOURCE_MANIFEST.json')==manifest['source_digest']
+ api_receipt=read(output/'binaries/api_mithrilhook.receipt.json')
+ assert sha(output/'binaries/api_mithrilhook.exe')==api_receipt['exe_sha256']
+ assert api_receipt['source_digest']==manifest['source_digest'] and api_receipt['input_digest']==manifest['input_digest']
+ for stream in ['stdout','stderr']:assert sha(output/'raw'/('application-targets.'+stream))==manifest['application_targets'][stream+'_sha256']
+ api_statuses=re.findall(r'^TARGET_PROBE name=(\w+) status=(\w+) enabled=0 executed=0$',(output/'raw/application-targets.stdout').read_text(),re.M)
+ assert len(api_statuses)==11 and {name for name,status in api_statuses}==API_TARGETS and dict(api_statuses)==manifest['application_targets']['classifications']
+ assert manifest['application_targets']['returncode']==0 and all(status in {'MTH_OK','MTH_ERROR_UNSUPPORTED_FUNCTION'} for name,status in api_statuses)
  probe_receipts={name:read(output/'binaries'/f'probe_{name}.receipt.json') for name in ENGINES}
  assert manifest['probe_cases']==PROBES and len(manifest['probes'])==len(ENGINES)*len(PROBES)
  seen_probes=set()
@@ -138,16 +152,27 @@ def audit(output):
  for result in manifest['probes']:
   engine,case=result['engine'],result['case'];assert engine in ENGINES and case in PROBES and (engine,case) not in seen_probes;seen_probes.add((engine,case))
   for stream in ['stdout','stderr']:assert sha(output/'raw'/f'probe-{engine}-{case}.{stream}')==result[stream+'_sha256']
-  if result['returncode']==0:assert json.loads((output/'raw'/f'probe-{engine}-{case}.stdout').read_text())==result['row']
+  if result['returncode']==0:assert json.loads((output/'raw'/f'probe-{engine}-{case}.stdout').read_text(),object_pairs_hook=unique_pairs,parse_constant=bad_constant)==result['row']
   validate_probe(engine,case,result,probe_receipts[engine]['bits'],probe_receipts[engine])
  entries=[]
  assert len(manifest['children'])==len(ENGINES)*len(CASES)*ROUNDS
  for item in manifest['children']:
   path=output/'raw'/item['file'];assert path.parent==output/'raw' and path.suffix=='.json'
-  assert sha(path)==item['sha256'];entry=read(path);assert entry['run_id']==manifest['run_id'];assert entry['exe_sha256']==receipts[entry['engine']]['exe_sha256'];entries.append(entry)
+  assert sha(path)==item['sha256'];entry=read(path);
+  for stream in ['stdout','stderr']:assert sha(path.with_suffix('.'+stream))==item[stream+'_sha256']
+  assert [json.loads(line,object_pairs_hook=unique_pairs,parse_constant=bad_constant) for line in path.with_suffix('.stdout').read_text().splitlines() if line]==entry['rows']
+  assert entry['run_id']==manifest['run_id'];assert entry['exe_sha256']==receipts[entry['engine']]['exe_sha256'];entries.append(entry)
+ assert manifest['seed']==19473
+ rng=random.Random(manifest['seed']);schedule=[]
+ for round_number in range(ROUNDS):
+  cases=list(CASES);rng.shuffle(cases)
+  for hooks,peers,callers in cases:
+   order=list(ENGINES);rng.shuffle(order)
+   schedule.extend((name,hooks,peers,callers,round_number) for name in order)
+ assert [(e['engine'],e['hooks'],e['peers'],e['callers'],e['round']) for e in entries]==schedule
  expected=analyze(entries,receipts,ROUNDS)
  assert read(output/'summary.json')==expected
- assert len(manifest['controls'])==len(ENGINES) and all(c['returncode']==1 and c['expected_failure']=='complete timed-call checksum' for c in manifest['controls'])
+ assert len(manifest['controls'])==len(ENGINES) and {c['engine'] for c in manifest['controls']}==set(ENGINES) and all(c['returncode']==1 and c['expected_failure']=='complete timed-call checksum' for c in manifest['controls'])
  for control in manifest['controls']:
   engine=control['engine'];assert engine in ENGINES
   for stream in ['stdout','stderr']:assert sha(output/'raw'/f'control-{engine}.{stream}')==control[stream+'_sha256']
@@ -177,11 +202,22 @@ def measure(build,output):
  # Include redistribution notices with the retained benchmark binaries.
  for relative in input_record['files']:
   path=ROOT/relative
-  if path.name.lower().startswith(('license','copying','notice')):
+  if any(token in path.name.lower() for token in ('license','copying','notice')):
    dest=output/'licenses'/Path(relative).relative_to('build');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,dest)
  for name in ['LICENSE','LICENSE.txt','LICENSE.SAFE_FREEZE','THIRD_PARTY_NOTICES.txt','metadata/BENCHMARK_SOURCES.json']:
   dest=output/'licenses'/'mithrilhook'/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,dest)
  manifest={'schema':'mithrilhook.benchmark-run.v1','run_id':str(uuid.uuid4()),'commit':commit,'source_digest':sha(ROOT/'metadata/SOURCE_MANIFEST.json'),'input_digest':sha(inputs),'host':{'platform':platform.platform(),'processor':platform.processor(),'logical_processors':os.cpu_count(),'power_policy':subprocess.run(['powercfg','/getactivescheme'],capture_output=True,text=True).stdout.strip()},'engines':ENGINES,'cases':CASES,'rounds':ROUNDS,'seed':19473,'children':[],'controls':[],'probe_cases':PROBES,'probes':[]}
+ api_exe=build/'Release/api_mithrilhook.exe';api_receipt=read(api_exe.with_suffix('.receipt.json'))
+ assert api_receipt['exe_sha256']==sha(api_exe) and api_receipt['source_digest']==manifest['source_digest'] and api_receipt['input_digest']==manifest['input_digest']
+ shutil.copy2(api_exe,output/'binaries'/api_exe.name);shutil.copy2(api_exe.with_suffix('.receipt.json'),output/'binaries'/api_exe.with_suffix('.receipt.json').name)
+ result=subprocess.run([str(api_exe)],capture_output=True,text=True,timeout=90)
+ for stream in ['stdout','stderr']:(output/'raw'/('application-targets.'+stream)).write_text(getattr(result,stream))
+ assert result.returncode==0,('actual API creation probe failed',result.stderr)
+ statuses=re.findall(r'^TARGET_PROBE name=(\w+) status=(\w+) enabled=0 executed=0$',result.stdout,re.M)
+ assert len(statuses)==11 and {name for name,status in statuses}==API_TARGETS
+ manifest['application_targets']={'classifications':dict(statuses),'returncode':0,'stdout_sha256':sha(output/'raw/application-targets.stdout'),'stderr_sha256':sha(output/'raw/application-targets.stderr')}
+ write(output/'run.json',manifest)
+ print('Actual API create/remove coverage: '+str(sum(status=='MTH_OK' for name,status in statuses))+'/11; no target enabled/executed',flush=True)
  for engine in ENGINES:
   receipt=read(build/'Release'/f'probe_{engine}.receipt.json')
   for case in PROBES:
@@ -189,7 +225,7 @@ def measure(build,output):
    item={'engine':engine,'case':case,'returncode':result.returncode,'status':'FAILED'}
    for stream in ['stdout','stderr']:
     path=output/'raw'/f'probe-{engine}-{case}.{stream}';path.write_text(getattr(result,stream));item[stream+'_sha256']=sha(path)
-   if result.returncode==0:item['row']=json.loads(result.stdout);item['status']=item['row']['status']
+   if result.returncode==0:item['row']=json.loads(result.stdout,object_pairs_hook=unique_pairs,parse_constant=bad_constant);item['status']=item['row']['status']
    manifest['probes'].append(item);write(output/'run.json',manifest)
    validate_probe(engine,case,item,receipt['bits'],receipt)
  print('Completed source-form/creation/unwind compatibility matrix',flush=True)
@@ -209,22 +245,35 @@ def measure(build,output):
     stem=f'r{round_number}-h{hooks}-p{peers}-c{callers}-{engine}'
     (output/'raw'/(stem+'.stdout')).write_text(result.stdout);(output/'raw'/(stem+'.stderr')).write_text(result.stderr)
     if result.returncode!=0:raise RuntimeError(f'Failed native child {stem}: {result.returncode}\n{result.stderr}')
-    entry={'run_id':manifest['run_id'],'engine':engine,'hooks':hooks,'peers':peers,'callers':callers,'round':round_number,'exe_sha256':receipts[engine]['exe_sha256'],'rows':[json.loads(line) for line in result.stdout.splitlines() if line]}
+    entry={'run_id':manifest['run_id'],'engine':engine,'hooks':hooks,'peers':peers,'callers':callers,'round':round_number,'exe_sha256':receipts[engine]['exe_sha256'],'rows':[json.loads(line,object_pairs_hook=unique_pairs,parse_constant=bad_constant) for line in result.stdout.splitlines() if line]}
     validate_child(entry,receipts[engine]);path=output/'raw'/(stem+'.json');write(path,entry)
-    manifest['children'].append({'file':path.name,'sha256':sha(path)});entries.append(entry)
+    manifest['children'].append({'file':path.name,'sha256':sha(path),'stdout_sha256':sha(output/'raw'/(stem+'.stdout')),'stderr_sha256':sha(output/'raw'/(stem+'.stderr'))});entries.append(entry)
     write(output/'run.json',manifest)
   print(f'Completed paired round {round_number+1}/{ROUNDS}',flush=True)
  write(output/'summary.json',analyze(entries,receipts,ROUNDS));write(output/'run.json',manifest)
- audit(output)
  print_report(output)
 
 def print_report(output):
  summary=read(Path(output)/'summary.json');rows=summary['timings']
- lines=['# Native hook-engine comparison','', 'Leaf fixtures, 11 hooks and 4 idle peers; median across retained samples.', '', '| Engine | Cold complete install (us total) | Complete remove (us total, warm) | Detour-to-original (ns/call batch average) |', '| --- | ---: | ---: | ---: |']
+ manifest=read(Path(output)/'run.json')
+ lines=['# Native hook-engine comparison','',f"Source: `{manifest['commit']}`; compiler: `{read(Path(output)/'binaries/bench_mithrilhook.receipt.json')['compiler']}`.",f"Host: {manifest['host']['platform']}; {manifest['host']['processor']}; logical processors: {manifest['host']['logical_processors']}.",'',f"{summary['children']} positive children; {summary['rounds']} paired rounds; {len(CASES)} workload cases.",'', 'Example: leaf fixtures, 11 hooks and 4 idle peers; medians across retained samples.', '', '| Engine | Cold complete install (us total) | Complete remove (us total, warm) | Detour-to-original (ns/call batch average) |', '| --- | ---: | ---: | ---: |']
  for name in ENGINES:
   def value(metric):return next(r['median_ns'] for r in rows if r['engine']==name and r['hooks']==11 and r['peers']==4 and r['callers']==0 and r['metric']==metric)
   lines.append(f'| {name} | {value("complete_install_cold")*11/1000:.2f} | {value("complete_remove_warm")*11/1000:.2f} | {value("detour_original"):.2f} |')
- lines+=['','No equivalent-safety or cross-host ranking is established. See raw data and full per-case statistics.']
+ lines+=['','## Source-form compatibility','', '| Engine | Call behavior verified | API rejected | Creation only | N/A | Failed |','| --- | ---: | ---: | ---: | ---: | ---: |']
+ for name in ENGINES:
+  counts=collections.Counter(p['status'] for p in manifest['probes'] if p['engine']==name)
+  lines.append('| '+name+' | '+' | '.join(str(counts[k]) for k in ['CALL_BEHAVIOR_VERIFIED','API_REJECTED','CREATION_ONLY_NOT_SEMANTICALLY_VALIDATED','NOT_APPLICABLE','FAILED'])+' |')
+ lines+=['','## Generated unwind observations','', '| Engine | Registered nonleaf | Relative CALL | RBP frame / CH byte write |','| --- | --- | --- | --- |']
+ for name in ENGINES:
+  cells=[]
+  for case in ['registered_nonleaf','relative_call','frame_byte_ch']:
+   item=next(p for p in manifest['probes'] if p['engine']==name and p['case']==case)
+   cells.append(item.get('row',{}).get('unwind',item['status']))
+  lines.append('| '+name+' | '+' | '.join(cells)+' |')
+ lines+=['','## Actual API create/remove observations','', '| Target | Result |','| --- | --- |']
+ for name,status in manifest['application_targets']['classifications'].items():lines.append(f'| {name} | {status} |')
+ lines+=['','Actual Windows targets were not enabled/executed. API refusals remain deployment gaps.','', 'No equivalent-safety or cross-host ranking is established. See raw data and full per-case/paired-interval statistics.']
  (Path(output)/'REPORT.md').write_text('\n'.join(lines)+'\n');print('\n'.join(lines))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--build');parser.add_argument('--output');parser.add_argument('--audit');parser.add_argument('--self-test',action='store_true');args=parser.parse_args()
