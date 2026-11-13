@@ -35,6 +35,24 @@ are refused, not emulated with stack operations that bypass control-flow
 mitigations. Ordinary relative CALL remains supported within the documented
 scope; general return-address introspection is not preserved by relocation.
 
+Copied x87 instructions (D8 through DF) return MTH_ERROR_UNSUPPORTED_FUNCTION
+before publication. Moving a producer changes the saved FPU instruction pointer,
+which FNSTENV/FSTENV, FNSAVE/FSAVE, FXSAVE or a later state save can expose.
+Rejecting only a save inside the copied prefix would miss a later observation.
+The refusal includes control, environment load/store and arithmetic forms;
+there is no claimed full x87 FIP transformation. A standalone WAIT does not
+update FIP and is not itself refused. A wait-prefixed x87 operation is refused
+when its x87 instruction is actually copied. x87 code entirely after an ordinary
+copied prefix remains at its source address and is supported in that scope.
+
+Fixed-size FXSAVE/FXRSTOR do not create a new x87 FIP and remain supported
+without copied x87 producers, subject to existing memory-range/unwind checks.
+Their RIP-relative memory envelope is still 512 bytes. Extended state forms
+XSAVE, XRSTOR, XSAVEOPT, XSAVEC, XSAVES and XRSTORS are refused when copied;
+their feature-dependent layouts are outside the supported contract. This does
+not authorize executing unknown CPU/OS state instructions. Plain MXCSR access
+and fences are distinct from these state-save opcode extensions.
+
 A copied relative CALL into [target,target+5) returns
 MTH_ERROR_UNSUPPORTED_FUNCTION before publication, including valid instruction
 boundaries. Those source bytes will be overwritten. Internal CALL subroutines

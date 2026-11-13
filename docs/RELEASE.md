@@ -1,56 +1,54 @@
 # Release preparation
 
-VERSION contains 1.0.0-rc.1. CMake and Windows fixed numeric metadata use 1.0.0;
-package/DLL strings preserve the full candidate version and Windows resources
-set the prerelease flag. This preparation does not create a tag or publish a
-release. The owner controls publication.
+The selected distribution version is **1.0.1**. VERSION is canonical. CMake,
+installed packages and Windows file/product resources all use 1.0.1, without
+an RC suffix. DLL resources clear the prerelease flag. Setting this version
+does not itself create a GitHub release or tag; the owner controls publication.
 
-## Candidate contents and evidence
+## Contents and evidence
 
-The candidate contains the independent thirteen-export MTH API, strict
-ownership core, bounded generated unwind support and reviewed corrections
-through the internal-CALL refusal in PR #18. The [changelog](../CHANGELOG.md) groups
-user-visible behavior and links the implementation PRs. Historical report-only
-PRs and the old 0.1.0 development identifier are not prior stable releases.
+The library includes the independent thirteen-export MTH API, strict ownership
+core, bounded generated unwind support and reviewed corrections through the
+x87 FIP/state-save policy in PR #19. The [changelog](../CHANGELOG.md) groups
+current behavior and links implementation PRs. The earlier 0.1.0 and
+1.0.0-rc.1 development identifiers are not listed as prior stable releases.
 
-Use the exact committed candidate head for native correctness, installed-package
-validation and the five-environment benchmark. The candidate PR records run
-links; each benchmark artifact records its commit, source/input manifests,
-binary receipts, raw streams, checksums, compatibility and audit results.
-Earlier source-specific numbers remain valid only for those earlier sources.
+Use the exact committed source for correctness, installed-package verification
+and comparative performance. PR #19 records its fresh Windows/package checks;
+older benchmark records retain their measured source/versions and are not
+renamed to 1.0.1. Benchmark artifacts record commits, manifests, executable
+receipts, raw samples, checksums, compatibility and audit results.
 
-Validation artifacts are named with the full candidate version and contain the
-installed static/shared Debug/Release packages, native test logs, installed
-consumer logs, licenses, VERSION and changelog. Inspect source/provenance and
-all relevant checks before choosing publication assets. Artifact retention is
-finite; preserve selected source/raw-evidence archives with the release record.
+Versioned validation artifacts contain installed static/shared Debug/Release
+packages, native/consumer test logs, licenses, VERSION and the current changelog.
+Before publication inspect source provenance, thirteen exports, full/fixed
+1.0.1 resources and a clear prerelease flag. Preserve chosen source/evidence
+archives because workflow artifact retention is finite.
 
-The distribution remains GPL-3.0-only, with MinHook/HDE BSD and authorized
-SAFE-FREEZE notices retained. No BSD relicensing is performed by this PR.
+Distribution remains GPL-3.0-only, with original MinHook/HDE BSD and authorized
+SAFE-FREEZE notices retained. No relicensing is part of this work.
 
-## Consuming the candidate
+## Consuming 1.0.1
 
-An unversioned find_package(MithrilHook CONFIG REQUIRED) discovers the explicitly
-selected installed package. To use a numeric 1.x request with this candidate:
+An unversioned package request remains available. Numeric stable requests need
+no prerelease permission:
 
 ```cmake
-set(MithrilHook_ALLOW_PRERELEASE ON)
-find_package(MithrilHook 1.0 CONFIG REQUIRED)
+find_package(MithrilHook 1.0.1 EXACT CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE MithrilHook::mithrilhook)
 ```
 
-Without that consent a numeric version request refuses prerelease packages;
-CMake's numeric syntax cannot express an rc suffix. The imported configuration
-exposes MithrilHook_VERSION, MithrilHook_VERSION_NUMERIC and
-MithrilHook_PRERELEASE. Match the package's static/shared and Debug/Release CRT
-configuration. This does not add a runtime dependency or legacy API alias.
+The package exposes MithrilHook_VERSION=1.0.1,
+MithrilHook_VERSION_NUMERIC=1.0.1 and an empty MithrilHook_PRERELEASE. Independent
+consumers verify exact 1.0.1 and compatible 1.0 discovery with prerelease consent
+disabled, reject incompatible major versions, then link and run. Match the
+package's static/shared and Debug/Release CRT settings. There is no additional
+runtime dependency or legacy API alias.
 
 ## Publication and the following integration
 
-After the candidate's library correctness/package/performance gates are
-reviewed, the owner can select the release version and immutable tag. A stable
-1.0.0 requires changing VERSION to 1.0.0, updating its changelog entry and
-validating those final assets; rc evidence must keep its recorded identity.
-Citrine then integrates the chosen package deliberately. Actual host/API/game
-startup, live callbacks, error recovery, shutdown and unload acceptance remain
-that next phase. See [Remaining work](REMAINING_WORK.md).
+After reviewing the selected source's correctness, package, performance and
+source/license evidence, the owner selects the immutable tag and assets.
+Citrine then integrates that package deliberately. Actual target prologues,
+startup, callbacks, recovery, shutdown and DLL unload remain the following
+application acceptance phase. See [Remaining work](REMAINING_WORK.md).

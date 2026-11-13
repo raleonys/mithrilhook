@@ -1,36 +1,41 @@
 # MithrilHook validation
 
-## Release candidate and exact source identity
+## Version and exact source identity
 
-The unpublished distribution version is 1.0.0-rc.1. The candidate in
-[PR #18](https://github.com/raleonys/mithrilhook/pull/18) adds internal-CALL
-patch-window refusal to merged PR #17. Its new native results belong to that
-PR's exact head. The completed #17 validation and benchmark results retain
-their earlier source identity.
-A document, tag or version change does not transfer evidence to other bytes.
+The distribution version is 1.0.1, with no prerelease suffix. The source in
+[PR #19](https://github.com/raleonys/mithrilhook/pull/19) includes merged PR #18
+and the x87 FIP/state-save correction. Its Windows/package evidence belongs
+to that PR's exact head. Earlier results retain their measured source identity;
+a document or version update does not transfer evidence to different bytes.
 
-The candidate matrix contains four x64 cells (MSVC Debug/Release static,
+The validation matrix contains four x64 cells (MSVC Debug/Release static,
 MSVC Release shared and clang-cl Release static) and three Win32 MSVC cells
 (Debug/Release static and Release shared). It exercises public API calls,
 real owned-code execution, peer/retirement behavior and exact negative controls.
 Each cell also builds and executes an independent installed-package consumer.
 The portable decoder and relocator run under Linux ASan/UBSan; the relocator
-contains 11,790 assertions, including 511 PUSH prefix/range layouts and 1,040
+contains 16,907 assertions, including 511 PUSH prefix/range layouts and 1,040
 CALL prefix/site/destination layouts plus ten forward-entry/expansion cases.
 Internal CALL refusal is checked before output or entry-patch publication.
 A generated native negative control removes only that refusal and must exit 1
 at the exact refusal assertion before any unsafe original is executed.
 Ordinary outside CALL controls execute source/original/detour/restore paths on
 both architectures; registered x64 controls verify source v1/generated v2
-unwind and actual generated-table retirement. Word-PUSH
+unwind and actual generated-table retirement. The x87 policy adds 2,520
+opcode/prefix/site layouts, 75 fixed/extended-state
+controls and two copied-prefix/body-boundary controls. The native fixture
+measures genuine source FIP, refusal before original publication, preserved
+FIP through allowed original/detour/restoration paths and FP state cleanup.
+Its generated negative control removes only the x87 guard and must fail at
+the exact refusal assertion. Word-PUSH
 range checks are structural; the registered native execution/unwind fixture
 uses ABI-describable eight-byte stack allocations.
 
-Versioned package requests do not silently accept a prerelease. Each installed
-consumer checks refusal without candidate consent, then explicitly accepts the
-candidate and verifies full/numeric package metadata before linking and running.
+For 1.0.1 each installed consumer leaves prerelease consent disabled, accepts
+exact 1.0.1 and compatible 1.0 requests, rejects major 2, and verifies full/numeric
+metadata before linking and running.
 Shared builds verify thirteen exact exports, product identity, numeric/full
-version resources and the prerelease flag against VERSION.
+version resources and a clear prerelease flag against VERSION.
 
 ## Completed predecessor evidence
 
@@ -38,6 +43,7 @@ These records validate their pinned sources, not later candidate bytes.
 
 | Stage | Exact source / run | Completed evidence |
 | --- | --- | --- |
+| Through PR #18 | `45ff055d4156ae6578e1bc9f3f207bcfd493f9cc`, [43509927578](https://github.com/raleonys/mithrilhook/actions/runs/43509927578) | 203 native engine tests + seven installed consumers (210 native total), two portable tests. Predates the x87 correction and 1.0.1 metadata in #19. |
 | Through PR #17 | `f006e53116b61ed9baabec025ed6bb26a7c6c7eb`, [43494694097](https://github.com/raleonys/mithrilhook/actions/runs/43494694097) | 189 native engine tests + seven installed consumers (196 native total), two portable tests; merged as `9f822317bcf3fa52a12683e0fbfaf1e28e3bcaee`. Predates the internal-CALL correction in #18. |
 | Through PR #16 | `59c851fd772838a9b84f3df8c202f657f1cec5f8`, [43488613785](https://github.com/raleonys/mithrilhook/actions/runs/43488613785) | 185 native engine tests + seven installed consumers (192 native total), two portable tests; merged master `c02605cb041034c3158abd0f5974f3b564657e71` has the identical tree. |
 | RIP access hardening, PR #15 | `ca1de1620b21b9580a48b608667075384fbcfc0a`, [43486839224](https://github.com/raleonys/mithrilhook/actions/runs/43486839224) | 171 native including consumers + two portable; native source/original/detour/restore/retirement and 512-byte access controls. |
