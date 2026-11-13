@@ -1,5 +1,10 @@
 # Remaining work and acceptance status
 
+A library stable release may precede Citrine integration: validate and version
+the independent library, integrate that fixed version, then validate the actual
+application. A release candidate can be used for early integration feedback.
+No tag or release is created without owner direction.
+
 The scoped core changes F01–F19 are implemented and merged through PR #4.
 The exact native result and source revision are recorded in
 [Validation](VALIDATION.md). There is no published stable release. Repository
@@ -13,7 +18,7 @@ issues are disabled; an empty open-issue/PR list does not close the work below.
 | Citrine integration | The core is independent; the application still uses its existing adapter/vendor input | Integrate the MTH API/package deliberately, preserve closed original-call admission and module ownership through failures, and validate every actual target on the identified host. |
 | Application/game lifecycle acceptance | Controlled engine fixtures and eleven create/remove targets pass; actual Windows API hooks are not enabled by that probe | Observe named-host startup, live detour/original behavior, partial-failure recovery, shutdown and DLL unload with callbacks drained and all owners retired. |
 | Deployment Windows/CPU matrix | Native CI is Windows Server 2022 x64/Win32; generated nonleaf metadata requires Windows 10 or later | Record the supported deployment builds/CPUs and execute the relevant compatibility, unwind and lifecycle cases there. Version-sensitive API prologues must be rechecked. |
-| First stable release | CMake version 0.1.0; no published release/tag | After the intended acceptance gates, the owner reviews supported platforms, package/install consumption, provenance/license notices, changelog and reproducible evidence, then chooses a tag/release. |
+| First stable release | CMake version 0.1.0; no published release/tag | After the independent library correctness, benchmark and package-consumption gates, the owner reviews supported platforms, notices, changelog and evidence and chooses a stable tag/release. Citrine then integrates that immutable version; its game/lifecycle acceptance remains a separate application gate. |
 
 Related application issues remain owned by Citrine. In particular,
 [native acceptance #20](https://github.com/raleonys/citrine-eclipse-mirage/issues/20),

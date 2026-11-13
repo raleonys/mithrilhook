@@ -2,11 +2,19 @@
 
 ## Current evidence
 
-No reproducible comparative hook-performance suite or timing result is retained
-in this repository. The inspected predecessor checkout, donor repository tree,
-and related Citrine benchmark documentation do not supply a performance result
-for the current MithrilHook runtime source. Performance ranking is therefore
-**NOT MEASURED**, and no speed or overhead advantage is claimed.
+The native comparison suite is implemented under `benchmarks/`. New measured
+results are pending; no current MithrilHook performance ranking is claimed.
+
+A historical SAFE-FREEZE report does exist at the pinned donor revision:
+[BENCHMARK_RESULTS.md](https://github.com/cyanoleon/minhook/blob/311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38/BENCHMARK_RESULTS.md),
+for code `a29eaa2aaa6e7eb8e4875c239d9ca861130d4b2a` and
+[run 43374271934](https://github.com/cyanoleon/minhook/actions/runs/43374271934).
+The earlier documentation audit missed this historical file. It compares the
+old strict core, official MinHook and `m417z/minhook` modes; the latter is not
+MinHook-Detours. It does not measure the current MithrilHook bytes, Microsoft
+Detours, standalone SlimDetours or MinHook-Detours, nor call-through latency.
+Its values remain historical evidence, with their original workload and safety
+limits; they are not transferred to this fork's new runtime.
 
 The 146 native CTest executions measure correctness contracts. CTest durations
 are not calibrated operation timings. The eleven-target probe and its
@@ -17,14 +25,16 @@ rank hook engines.
 
 ## Comparison candidates
 
-These are candidates for a future comparison, not measured or performance-ranked
-engines. Record a reviewed immutable source revision for each before running.
+External sources and the exact patched relocation output are pinned in
+`metadata/BENCHMARK_SOURCES.json`. These are separate native executables; the
+current run remains pending and no new performance ranking is inferred.
 
 | Candidate | Source identity | Performance status |
 | --- | --- | --- |
 | MithrilHook | [raleonys/mithrilhook](https://github.com/raleonys/mithrilhook), merged runtime `d32fd189f1459e6f7b70002d1483ada78342f055` | NOT MEASURED |
 | Official MinHook | [TsudaKageyu/minhook](https://github.com/TsudaKageyu/minhook); inherited base in `metadata/PROVENANCE.json` | NOT MEASURED |
 | Patched SAFE-FREEZE/Citrine predecessor | Exact donor and relocation inputs in `metadata/PROVENANCE.json`; choose and retain the complete built baseline | NOT MEASURED |
+| m417z MinHook | [m417z/minhook](https://github.com/m417z/minhook), original freeze mode | NOT MEASURED |
 | Microsoft Detours | [microsoft/Detours](https://github.com/microsoft/Detours) | NOT MEASURED |
 | KNSoft SlimDetours | [KNSoft/KNSoft.SlimDetours](https://github.com/KNSoft/KNSoft.SlimDetours) | NOT MEASURED |
 | MinHook-Detours | [m417z/minhook-detours](https://github.com/m417z/minhook-detours) | NOT MEASURED |
@@ -63,7 +73,7 @@ Benchmark adapters must not add legacy compatibility aliases to production.
   can repeat the analysis. Do not derive a benchmark from correctness-test
   wall-clock time or transfer results between different source revisions.
 
-This suite and its native measurements remain open work. A completed comparison
+Native execution and review of this new suite remain open work. A completed comparison
 must replace NOT MEASURED with identified evidence, including neutral or slower
 results. Until then, engine selection is supported by the documented ownership,
 compatibility and validation properties, not a performance superiority claim.

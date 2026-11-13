@@ -1,0 +1,40 @@
+name: Native hook-engine benchmarks
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'benchmarks/**'
+      - 'metadata/BENCHMARK_SOURCES.json'
+      - '.github/workflows/benchmarks.yml'
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: windows-2022
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, Win32]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/verify_sources.py
+      - run: python benchmarks/run.py --self-test
+      - run: python benchmarks/prepare.py
+      - run: cmake -S benchmarks -B build/bench-native -A ${{ matrix.arch }} -T v143
+      - run: cmake --build build/bench-native --config Release --parallel 2
+      - run: python benchmarks/run.py --build build/bench-native --output build/bench-results
+      - run: python benchmarks/run.py --audit build/bench-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hook-benchmark-${{ matrix.arch }}
+          path: |
+            build/bench-results
+            build/bench-prepared/inputs.json
+            build/bench-native/CMakeCache.txt
