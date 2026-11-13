@@ -1,6 +1,11 @@
 # Validation of the MithrilHook development candidate
 
-## Actually performed locally
+## Initial recorded local verification
+
+The following describes the initial core candidate recorded in
+metadata/LOCAL_VALIDATION.json, before the current audit changes. Its source
+hashes and original pending/publication fields are retained as historical
+evidence, not represented as the current repository status.
 
 - Source/export/branding inventory verification and whitespace checks.
 - GCC 14.2 x64 portable Debug build with AddressSanitizer and
@@ -26,19 +31,31 @@ An initial UBSan run detected misaligned multi-byte decoder loads. The modified
 HDE reads and relocation displacement stores now use memcpy. The same test
 passes with undefined-behavior failures configured to stop execution.
 
-## Pending final-source evidence
+## Accepted predecessor native evidence
 
-- Genuine MSVC x64 and Win32 Debug/Release CTest execution.
-- Genuine shared-library test execution and clang-cl x64 execution.
-- Execution of the six precise negative controls under Windows.
-- Consumer integration and actual application/game startup, rollback, shutdown
-  and unload acceptance.
+Master 742d6a7685a6c8c71f8210d8ea35f731e2864b28 passed all seven native Windows
+configurations and Linux portable checks:
+https://github.com/raleonys/mithrilhook/actions/runs/43434695722.
+That run executed 109 native tests (16 per x64 configuration and 15 per Win32
+configuration), plus two portable tests. The original six precise negative
+controls executed under Windows; the prior local-only pending statements above
+describe their earlier verification stage.
 
-The prepared GitHub workflow covers seven native build cells plus Linux
-portable checks. It has not been pushed or dispatched for this local candidate.
-There are 16 registered Windows tests on x64 and 15 on Win32; the x64-specific
-RIP relocation fixture is intentionally not registered/built as an x86 test.
-The bounded thread-churn fixture uses 50 transactions per run.
+## Current audit candidate
+
+The thread/batch/unwind audit is described in SECURITY_AUDIT.md. The workflow
+covers MSVC x64/Win32 Debug/Release static, x64/Win32 Release shared and clang-cl
+x64 Release, plus Linux portable ASan/UBSan checks. There are 21 native tests on
+x64 and 18 on Win32: 138 executions across the seven cells. X64-only relocation
+and runtime-function/unwind fixtures are not claimed as Win32 execution. Nine
+precise negative controls apply to x64, eight to Win32. The bounded genuine
+thread-churn fixture uses 50 transactions per run.
+
+Cross-builds and source checks do not establish native acceptance for these new
+bytes. Use the exact candidate head's checks at
+https://github.com/raleonys/mithrilhook/actions/workflows/validation.yml.
+Consumer integration and actual application/game startup, rollback, shutdown
+and unload acceptance remain separate work.
 
 ## Inherited reference evidence
 

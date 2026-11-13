@@ -21,6 +21,11 @@ for the call, not a permanently retained void** variable. In contrast to
 MinHook-Detours, this API does not keep updating that output variable during
 activation/deactivation.
 
+On x64, registered source functions are checked against their runtime-function
+metadata. Unsupported unwind-sensitive prefixes, handlers/chains and interior
+entries return MTH_ERROR_UNSUPPORTED_FUNCTION without publishing the original
+pointer. See SAFETY.md for the supported neutral-prefix and leaf contract.
+
 MTH_ALL_HOOKS selects the owned set for the documented enable/disable/queue
 operations. Removal remains target-specific; uninitialize retires the complete
 engine after the required quiescence. An already initialized engine must not be
@@ -32,6 +37,11 @@ mutations must recover pending completion first. Partial block retirement
 allows only further teardown. MTH_ERROR_MEMORY_PROTECT can therefore indicate
 incomplete native preparation, completion, retirement or cleanup; it is not
 permission to discard the owner. See SAFETY.md for the consumer protocol.
+
+After failed preparation or a partial batch, peer IPs are reconciled to physical
+hook state before resumption. A failed context repair remains an owned retryable
+operation. Queued changes for unwritten targets remain pending; a caller can
+retry apply or explicitly change that intent after pending cleanup completes.
 
 MTH_IsOperationInProgressOnThisThread is an observation, not a cross-thread
 reservation or a safe-unload verdict. Error formatting and this observation do

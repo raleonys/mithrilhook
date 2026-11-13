@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause AND GPL-3.0-only
 
 /* Actual strict engine with deterministic failure boundaries. Targets and
  * projected peers are never executed. Real page protection is checked below. */
@@ -20,6 +20,9 @@
 
 static BOOL fail_restore, fail_write_protect, fail_flush, fail_free, fail_destroy;
 static BOOL two_peers,fail_second_context,fail_stack_read,short_stack_read;
+static BOOL late_peer;
+static unsigned scans, context_reads, fail_context_read_after;
+static DWORD_PTR fail_context_destination;
 static unsigned fail_write_call,write_calls;
 static unsigned fail_free_after,free_calls;
 static unsigned checks, enumerations, resumes;
@@ -35,29 +38,38 @@ static void require(BOOL ok, const char* why) {
 }
 static LONG NTAPI next_peer(HANDLE process,HANDLE previous,ACCESS_MASK access,ULONG attributes,ULONG flags,PHANDLE next) {
     (void)process;(void)access;(void)attributes;(void)flags;++enumerations;
-    *next = !previous ? cursor : two_peers && previous==cursor ? cursor2 : NULL;
+    if (!previous) ++scans;
+    *next = !previous ? cursor : (two_peers || (late_peer && scans >= 2)) && previous==cursor ? cursor2 : NULL;
     return *next ? 0 : (LONG)0x8000001AL;
 }
 static FARPROC WINAPI lookup(HMODULE module,LPCSTR name) {
     return !strcmp(name,"NtGetNextThread") ? (FARPROC)next_peer : GetProcAddress(module,name);
 }
-static DWORD WINAPI thread_id(HANDLE h) { return h==cursor || h==cursor2 ? GetCurrentThreadId()+1 : GetThreadId(h); }
+static DWORD WINAPI thread_id(HANDLE h) {
+    if(h==cursor || h==peer)return GetCurrentThreadId()+1;
+    if(h==cursor2 || h==peer2)return GetCurrentThreadId()+2;
+    return GetThreadId(h);
+}
 static BOOL WINAPI duplicate(HANDLE a,HANDLE h,HANDLE b,LPHANDLE out,DWORD access,BOOL inherit,DWORD flags) {
     if(h==cursor || h==cursor2){*out=h==cursor?peer:peer2;return TRUE;}return DuplicateHandle(a,h,b,out,access,inherit,flags);
 }
 static DWORD WINAPI suspend_peer(HANDLE h) { return h==peer || h==peer2 ? 0 : SuspendThread(h); }
 static DWORD WINAPI resume_peer(HANDLE h) { if(h==peer || h==peer2){++resumes;return 1;}return ResumeThread(h); }
 static BOOL WINAPI close_peer(HANDLE h) { return h==peer || h==cursor || h==peer2 || h==cursor2 ? TRUE : CloseHandle(h); }
-static BOOL WINAPI exit_code(HANDLE h,LPDWORD out) { if(h==peer || h==peer2){*out=STILL_ACTIVE;return TRUE;}return GetExitCodeThread(h,out); }
+static BOOL WINAPI exit_code(HANDLE h,LPDWORD out) { if(h==peer || h==peer2 || h==cursor || h==cursor2){*out=STILL_ACTIVE;return TRUE;}return GetExitCodeThread(h,out); }
 static BOOL WINAPI context_peer(HANDLE h,LPCONTEXT out) {
     if(h==peer || h==peer2){DWORD flags=out->ContextFlags;
+        ++context_reads;
+        if(fail_context_read_after && context_reads>fail_context_read_after){SetLastError(ERROR_ACCESS_DENIED);return FALSE;}
         if(h==peer2 && fail_second_context){SetLastError(ERROR_ACCESS_DENIED);return FALSE;}
         memset(out,0,sizeof(*out));out->ContextFlags=flags;
         PEER_IP(out)=h==peer?peer_ip:0;PEER_REGISTER(out)=peer_register;PEER_SP(out)=(DWORD_PTR)(ULONG_PTR)peer_stack;return TRUE;}
     return GetThreadContext(h,out);
 }
 static BOOL WINAPI set_context_peer(HANDLE h,const CONTEXT* in) {
-    if(h==peer || h==peer2){if(h==peer)peer_ip=PEER_IP(in);return TRUE;}return SetThreadContext(h,in);
+    if(h==peer || h==peer2){
+        if(fail_context_destination && PEER_IP(in)==fail_context_destination){SetLastError(ERROR_ACCESS_DENIED);return FALSE;}
+        if(h==peer)peer_ip=PEER_IP(in);return TRUE;}return SetThreadContext(h,in);
 }
 static SIZE_T WINAPI query(LPCVOID address,PMEMORY_BASIC_INFORMATION out,SIZE_T size) {
     ULONG_PTR at=(ULONG_PTR)address,start=(ULONG_PTR)peer_stack,end=start+sizeof(peer_stack);
@@ -118,6 +130,7 @@ static void setup(void) {
     DWORD old;
     fail_restore=fail_write_protect=fail_flush=fail_free=fail_destroy=FALSE;
     two_peers=fail_second_context=fail_stack_read=short_stack_read=FALSE;
+    late_peer=FALSE;scans=context_reads=fail_context_read_after=0;fail_context_destination=0;
     fail_write_call=write_calls=0;
     fail_free_after=free_calls=0;
     peer_ip=peer_register=0;memset(peer_stack,0,sizeof peer_stack);
@@ -155,8 +168,9 @@ static void prewrite_retirement(void) {
     LPVOID original;setup();original=create_at(0);peer_ip=(DWORD_PTR)(ULONG_PTR)target;
     fail_write_protect=TRUE;
     require(MTH_EnableHook(target)==MTH_ERROR_MEMORY_PROTECT && target[0]==0x90,"pre-write failure leaves target unchanged");
-    require(peer_ip==(DWORD_PTR)(ULONG_PTR)original,"preparation already redirected projected peer");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)target,"pre-write refusal restores the original peer IP");
     fail_write_protect=FALSE;
+    peer_ip=(DWORD_PTR)(ULONG_PTR)original; /* Independently exercise retirement of an occupied buffer. */
     require(MTH_RemoveHook(target)==MTH_ERROR_MEMORY_PROTECT,"disabled removal retains trampoline occupied by projected peer");
     require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"uninitialize retains trampoline occupied by projected peer");
     peer_ip=0;peer_stack[0]=(DWORD_PTR)(ULONG_PTR)original;
@@ -194,19 +208,62 @@ static void partial_batch(void) {
     require(MTH_QueueEnableHook(target)==MTH_OK && MTH_QueueEnableHook(target+64)==MTH_OK,"queue two-target batch");
     peer_ip=(DWORD_PTR)(ULONG_PTR)(target+64);fail_write_call=2;
     require(MTH_ApplyQueued()==MTH_ERROR_MEMORY_PROTECT && target[0]==0xe9 && target[64]==0x90,"second-target failure preserves physical partial-batch state");
-    require(peer_ip==(DWORD_PTR)(ULONG_PTR)second,"unwritten batch target can already have redirected peer");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)(target+64),"unwritten batch target retains its original peer IP");
     fail_write_call=0;
+    require(MTH_ApplyQueued()==MTH_OK && peer_ip==(DWORD_PTR)(ULONG_PTR)second,"retry commits remaining queued enable and its peer mapping");
     require(MTH_DisableHook(MTH_ALL_HOOKS)==MTH_OK && target[0]==0x90 && target[64]==0x90,"explicit rollback restores written prefix");
-    require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"rollback still retains unwritten target trampoline with redirected peer");
     peer_ip=0;finish();
 }
 static void partial_preparation(void) {
     LPVOID original;setup();original=create_at(0);two_peers=fail_second_context=TRUE;peer_ip=(DWORD_PTR)(ULONG_PTR)target;
     require(MTH_EnableHook(target)==MTH_ERROR_MEMORY_PROTECT && target[0]==0x90,"later peer preparation failure rejects target mutation");
-    require(peer_ip==(DWORD_PTR)(ULONG_PTR)original,"earlier successful IP update remains accounted for");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)target,"later preparation failure restores the earlier peer IP");
     fail_second_context=FALSE;
-    require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"partial peer preparation cannot release occupied trampoline");
+    (void)original;
     peer_ip=0;finish();
+}
+static void partial_disable(BOOL written) {
+    LPVOID first,second;setup();first=create_at(0);second=create_at(64);
+    require(MTH_EnableHook(MTH_ALL_HOOKS)==MTH_OK,"enable both targets before partial disable");
+    peer_ip=(DWORD_PTR)(ULONG_PTR)(written?(BYTE*)first+1:(BYTE*)second+1);
+    require(MTH_QueueDisableHook(MTH_ALL_HOOKS)==MTH_OK,"queue both disables");
+    write_calls=0;fail_write_call=2;
+    require(MTH_ApplyQueued()==MTH_ERROR_MEMORY_PROTECT && target[0]==0x90 && target[64]==0xe9,"disable failure preserves actual partial batch bytes");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)(written?target+1:(BYTE*)second+1),"partial disable maps peers only for physically written targets");
+    require(!HasRetainedThreadOwnership(),"completed partial-batch reconciliation drains peers");
+    fail_write_call=0;
+    require(MTH_ApplyQueued()==MTH_OK && target[64]==0x90,"retry finishes remaining queued disable");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)(written?target+1:target+65),"retry maps the remaining disabled target");
+    finish();
+}
+static void single_disable_refusal(void) {
+    LPVOID original;setup();original=create_at(0);
+    require(MTH_EnableHook(target)==MTH_OK,"enable before single-disable refusal");
+    peer_ip=(DWORD_PTR)(ULONG_PTR)((BYTE*)original+2);fail_write_protect=TRUE;
+    require(MTH_DisableHook(target)==MTH_ERROR_MEMORY_PROTECT && target[0]==0xe9,"single disable fails before changing target bytes");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)((BYTE*)original+2),"unwritten disable cannot resume peer at still-patched target");
+    fail_write_protect=FALSE;require(MTH_DisableHook(target)==MTH_OK,"retry single disable");finish();
+}
+static void repair_failure(BOOL read) {
+    LPVOID original;unsigned before;setup();original=create_at(0);peer_ip=(DWORD_PTR)(ULONG_PTR)target;
+    fail_write_protect=TRUE;before=resumes;
+    if(read)fail_context_read_after=1;else fail_context_destination=(DWORD_PTR)(ULONG_PTR)target;
+    require(MTH_EnableHook(target)==MTH_ERROR_MEMORY_PROTECT && target[0]==0x90,"pre-write failure triggers peer repair");
+    require(peer_ip==(DWORD_PTR)(ULONG_PTR)original && resumes==before && HasRetainedThreadOwnership(),"failed IP repair retains suspended peers and original-IP journal");
+    require(MTH_ApplyQueued()==MTH_ERROR_MEMORY_PROTECT && resumes==before,"persistent repair failure blocks even no-op mutation");
+    fail_context_read_after=0;fail_context_destination=0;fail_write_protect=FALSE;
+    require(MTH_ApplyQueued()==MTH_OK && peer_ip==(DWORD_PTR)(ULONG_PTR)target && !HasRetainedThreadOwnership(),"repair retry restores original IP before releasing peer ownership");
+    require(resumes==before+1,"repair retry resumes the owned peer exactly once");finish();
+}
+static void late_birth(BOOL retirement) {
+    setup();create_at(0);peer_ip=(DWORD_PTR)(ULONG_PTR)target;late_peer=TRUE;scans=0;
+    if(retirement)
+        require(MTH_RemoveHook(target)==MTH_ERROR_MEMORY_PROTECT,"late peer rejects generated-code retirement");
+    else
+        require(MTH_EnableHook(target)==MTH_ERROR_MEMORY_PROTECT,"peer born after enumeration rejects mutation before patching");
+    require(target[0]==0x90 && peer_ip==(DWORD_PTR)(ULONG_PTR)target,"late-peer refusal preserves bytes and original peer IP");
+    require(!HasRetainedThreadOwnership() && FindHookEntry(target)!=INVALID_HOOK_POS,"late-peer refusal preserves hook owner and drains acquired peers");
+    late_peer=FALSE;scans=0;finish();
 }
 static void stack_failures(void) {
     setup();create_at(0);fail_stack_read=TRUE;
@@ -245,7 +302,9 @@ int main(int argc,char** argv) {
     if(!strcmp(mode,"all")||!strcmp(mode,"heap"))release_retry(TRUE);
     if(!strcmp(mode,"all")||!strcmp(mode,"pages"))page_protections();
     if(!strcmp(mode,"all")||!strcmp(mode,"unpublished"))unpublished_failure();
-    if(!strcmp(mode,"all")){partial_batch();partial_preparation();stack_failures();patch_above_pages();partial_block_retirement();}
+    if(!strcmp(mode,"partial-disable"))partial_disable(FALSE);
+    if(!strcmp(mode,"late-peer"))late_birth(FALSE);
+    if(!strcmp(mode,"all")){partial_batch();partial_disable(FALSE);partial_disable(TRUE);single_disable_refusal();repair_failure(FALSE);repair_failure(TRUE);late_birth(FALSE);late_birth(TRUE);partial_preparation();stack_failures();patch_above_pages();partial_block_retirement();}
     require(checks!=0,"known completion test mode required");
     printf("PASS: %u completion, control-flow, retirement and page checks (projected peers)\n",checks);
     return 0;

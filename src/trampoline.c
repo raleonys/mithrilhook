@@ -187,6 +187,7 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 
     ct->patchAbove = FALSE;
     ct->nIP        = 0;
+    ct->oldSize    = 0;
 
     do
     {
@@ -375,6 +376,8 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 
         // Avoid using memcpy to reduce the footprint.
         memcpy((LPBYTE)ct->pTrampoline + newPos, pCopySrc, copySize);
+        if (oldPos < sizeof(JMP_REL))
+            ct->oldSize = oldPos + hs.len;
         newPos += copySize;
         oldPos += hs.len;
     } while (!finished);

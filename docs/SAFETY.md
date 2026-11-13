@@ -15,6 +15,9 @@ an unrecoverable failure.
   refused; arbitrary cross-thread host-lock inversion is not solved.
 - Queue a batch and apply once when appropriate. A batch still writes targets
   sequentially. A later error can leave an earlier target transitioned.
+  Before releasing peers, the engine reconciles their IPs from the captured
+  original IPs and only the transitions whose bytes were actually written.
+  Failed reconciliation retains the suspended owners and blocks new mutations.
 - Preserve the owner, original-call pointers and callback context after failure.
   Retry cleanup explicitly. Partial block retirement is shutdown-only.
 - Disable, stop admitting new original calls, drain callback users, and only
@@ -24,18 +27,27 @@ an unrecoverable failure.
 
 ## Remaining engineering boundaries
 
-1. Enumeration is a bounded peer observation. A new thread may be born after
-   it; there is no universal thread-birth barrier. Upstream PR #151's loader-lock
-   and fixed PEB-offset proposal is not imported.
-2. Context relocation and multi-hook writes are not an all-or-nothing hardware
-   transaction or a complete rollback journal for every peer.
+1. Enumeration is a bounded peer observation. A second scan after suspension
+   refuses any observed live peer not covered by the owned suspended set.
+   A thread may still be born after that final observation; there is no universal
+   thread-birth barrier. The caller must coordinate creation/admission for a
+   stronger guarantee. Upstream PR #151's loader-lock and fixed PEB-offset
+   proposal is not imported.
+2. Multi-hook writes remain sequential, with a committed prefix on failure.
+   Peer repair follows physical state, not queued intent; it does not roll back
+   all target bytes or create an all-or-nothing hardware transaction.
 3. Readable code snapshots do not authorize arbitrary concurrent unmapping or
    foreign patching. The consumer must control those lifetimes.
 4. The decoder and relocated instruction forms are finite. The #363 changes
    improve specific RIP/EIP/VEX/relative cases, not all future ISA encodings.
-5. x64 exception/unwind behavior for arbitrary relocated functions is not
-   universally established. Unsupported cases require additional bounded
-   reproductions and native evidence before being advertised as supported.
+5. Generated x64 code has no synthesized runtime-function/unwind table. Creation
+   therefore refuses registered nonleaf interior entries, unwind operations
+   within the relocated prefix, handler/chained metadata and unrecognized
+   metadata formats with MTH_ERROR_UNSUPPORTED_FUNCTION. A registered function
+   with a supported neutral prefix can remain leaf-unwindable until jumping
+   back to its original code. Unregistered source code must already satisfy
+   the Windows leaf-unwind contract; invalid custom metadata is not repaired.
+   This is conservative refusal, not general x64 exception-handler support.
 6. Stack/register scans can find stale pointer values and conservatively defer
    cleanup. The scan budget is bounded; incomplete reads reject retirement.
 7. Actual arbitrary host/game unload acceptance remains independent of controlled
@@ -43,3 +55,5 @@ an unrecoverable failure.
    the consumer's responsibility.
 
 Do not remove checks or accept unrelated crashes/timeouts to make a test green.
+
+The audit cases and exact scope are described in [SECURITY_AUDIT.md](SECURITY_AUDIT.md).

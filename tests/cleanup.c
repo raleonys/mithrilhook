@@ -197,7 +197,7 @@ int inherited_failure_suite(void) {
     HANDLE heap;
     require(MTH_Initialize()==MTH_OK,"initialize actual engine");heap=g_hHeap;
     require(Freeze(&threads,ALL_HOOKS_POS,ACTION_APPLY_QUEUED)==MTH_OK,"Nt enumeration and peer preparation");
-    require(enumeration==2&&threads.size==1&&threads.pItems[0].suspended,"duplicated peer owned and suspended");
+    require(enumeration==4&&threads.size==1&&threads.pItems[0].suspended,"duplicated peer owned and suspended; second coverage scan completed");
     fail_resume=TRUE;
     require(Unfreeze(&threads)==MTH_ERROR_MEMORY_PROTECT&&HasRetainedThreadOwnership(),"failed resume retains ownership");
     require(closes==0&&g_retainedThreads.pItems[0].suspended,"suspended handle cannot be closed");

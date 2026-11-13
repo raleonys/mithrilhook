@@ -20,6 +20,11 @@ CASES={
  'queue':('static MTH_STATUS QueueHook(', 'FAIL: queue mutation cannot bypass retained cleanup'),
  'apply':('MTH_STATUS WINAPI MTH_ApplyQueued(', 'FAIL: no-op apply must not hide unresolved owner'),
 }
+EXTRA={
+ 'reconcile':('static BOOL ReconcileThreadIPs(PFROZEN_THREADS pThreads)\n{','TRUE','FAIL: partial disable maps peers only for physically written targets'),
+ 'coverage':('static MTH_STATUS VerifyFrozenThreadCoverage(PFROZEN_THREADS pThreads)\n{','MTH_OK','FAIL: peer born after enumeration rejects mutation before patching'),
+ 'unwind':('static BOOL IsRelocationUnwindSafe(const TRAMPOLINE *ct)\n{','TRUE',None),
+}
 def prepare(output):
  output=Path(output).resolve()
  if not output.is_relative_to((ROOT/'build').resolve()):
@@ -36,26 +41,35 @@ def prepare(output):
   if body.count(GUARD)!=1:raise ValueError('Missing unique entry guard: '+mode)
   result=source[:start]+body.replace(GUARD,'',1)+source[end:]
   (output/(mode+'.c')).write_text(result)
- anchor='Freeze(&threads, pos, enable ? ACTION_ENABLE : ACTION_DISABLE)'
+ for mode,(signature,value,_) in EXTRA.items():
+  if source.count(signature)!=1:raise ValueError('Missing unique safety helper: '+mode)
+  (output/(mode+'.c')).write_text(source.replace(signature,signature+'\n    return '+value+';',1))
+ anchor='ip = hook->isEnabled ? FindNewIP(hook, desired) : FindOldIP(hook, desired);'
  if source.count(anchor)!=1:raise ValueError('Missing unique disable-action anchor')
- (output/'stale.c').write_text(source.replace(anchor,'Freeze(&threads, pos, ACTION_ENABLE)',1))
+ (output/'stale.c').write_text(source.replace(anchor,'ip = hook->isEnabled ? FindNewIP(hook, desired) : 0;',1))
 def run(mode,command):
  result=subprocess.run(command,capture_output=True,text=True,timeout=35)
  print(result.stdout,end='');print(result.stderr,end='',file=sys.stderr)
  failures=[s for s in (result.stdout+'\n'+result.stderr).splitlines() if s.startswith('FAIL:')]
+ if mode=='unwind':
+  lines=(result.stdout+'\n'+result.stderr).splitlines()
+  if result.returncode!=42 or failures or 'UNWIND_MISMATCH: relocated stack-changing prologue has no registered function entry' not in lines or 'UNWIND_CLEANUP: PASS hook, function table, allocation and handles retired' not in lines:
+   raise RuntimeError('Unwind control did not prove the precise metadata mismatch and complete cleanup')
+  print('PASS: exact negative control unwind, complete cleanup');return
  if mode=='stale':
   lines=(result.stdout+'\n'+result.stderr).splitlines()
   if result.returncode!=42 or failures or 'SINGLE_DISABLE_IP_MISMATCH: real IP retained the trampoline/relay address' not in lines or 'REAL_PEER_CLEANUP: PASS original context restored, worker joined, handle count restored' not in lines:
    raise RuntimeError('Stale-action control did not prove the precise mismatch and complete cleanup')
   print('PASS: exact negative control stale, complete cleanup');return
- if result.returncode!=1 or failures!=[CASES[mode][1]]:
+ expected=EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
+ if result.returncode!=1 or failures!=[expected]:
   raise RuntimeError('Control did not fail only at its required assertion: '+mode)
  print('PASS: exact negative control '+mode)
 def main():
  parser=argparse.ArgumentParser(description=__doc__)
  sub=parser.add_subparsers(dest='operation',required=True)
  p=sub.add_parser('prepare');p.add_argument('--output',required=True)
- p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,"stale"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
+ p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,"stale"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
  args=parser.parse_args()
  if args.operation=='prepare':prepare(args.output)
  else:

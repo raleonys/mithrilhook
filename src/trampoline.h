@@ -100,6 +100,7 @@ typedef struct _TRAMPOLINE
     UINT   nIP;             // [Out] Number of the instruction boundaries.
     UINT8  oldIPs[8];       // [Out] Instruction boundaries of the target function.
     UINT8  newIPs[8];       // [Out] Instruction boundaries of the trampoline function.
+    UINT8  oldSize;         // [Out] Original bytes actually relocated, excluding jump-back.
 } TRAMPOLINE, *PTRAMPOLINE;
 
 BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct);
