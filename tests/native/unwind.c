@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Genuine Windows runtime-function registration and virtual unwinding.
-// No fixture instructions or invented return addresses are executed.
+// Owned fixture instructions execute; invented return addresses are only unwound.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +24,11 @@ static void verify_generated_unwind(BYTE *pc,DWORD64 *sp,DWORD64 expectedRsp,DWO
     memset(&context,0,sizeof(context));context.ContextFlags=CONTEXT_FULL;
     context.Rip=(DWORD64)(ULONG_PTR)pc;context.Rsp=(DWORD64)(ULONG_PTR)sp;context.Rbx=initialRbx;
     (void)RtlVirtualUnwind(0,base,context.Rip,function,&context,&handler,&frame,NULL);
+    if(context.Rip!=expectedRip || context.Rsp!=expectedRsp || context.Rbx!=expectedRbx)
+        fprintf(stderr,"UNWIND_DETAIL pc_offset=%llu range_start=%lu check=%u rip_match=%u rsp_delta=%lld rbx=%llu expected_rbx=%llu\n",
+            (unsigned long long)((DWORD64)(ULONG_PTR)pc-base),(unsigned long)function->BeginAddress,checks,
+            (unsigned)(context.Rip==expectedRip),(long long)(context.Rsp-expectedRsp),
+            (unsigned long long)context.Rbx,(unsigned long long)expectedRbx);
     require(context.Rip==expectedRip && context.Rsp==expectedRsp && context.Rbx==expectedRbx,
         "generated unwind restores the exact caller stack, return address and nonvolatile register");
 }
