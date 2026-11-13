@@ -43,9 +43,11 @@ an unrecoverable failure.
    foreign patching. The consumer must control those lifetimes.
 4. The decoder and relocated instruction forms are finite. The #363 changes
    improve specific RIP/EIP/VEX/relative cases, not all future ISA encodings.
-5. Supported version-1 x64 prefixes receive owned generated unwind metadata.
-   The synthetic prologue covers the jump-back to avoid false tail-epilogue
-   interpretation. Handler-bearing bodies outside the original prologue,
+5. Supported version-1 x64 prefixes receive owned version-2 unwind metadata
+   on Windows 10 and later. Older/unknown systems retain refusal when generated
+   nonleaf metadata is needed. An explicit empty epilogue set and synthetic
+   prologue covering the jump-back avoid false tail-epilogue interpretation.
+   Handler-bearing bodies outside the original prologue,
    chained/unknown source formats, nonleaf interior entries and undescribed
    body stack/frame changes remain unsupported. Unregistered source code must
    already satisfy the Windows leaf-unwind contract; invalid custom metadata

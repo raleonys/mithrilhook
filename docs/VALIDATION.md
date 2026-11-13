@@ -1,72 +1,81 @@
-# Validation of the MithrilHook development candidate
+# MithrilHook validation
 
-## Initial recorded local verification
+## Latest merged runtime source
 
-The following describes the initial core candidate recorded in
-metadata/LOCAL_VALIDATION.json, before the current audit changes. Its source
-hashes and original pending/publication fields are retained as historical
-evidence, not represented as the current repository status.
+PR #4 was merged as `d32fd189f1459e6f7b70002d1483ada78342f055`.
+Its [master run 43456198204](https://github.com/raleonys/mithrilhook/actions/runs/43456198204)
+completed successfully in all eight jobs. The reviewed PR head
+`e5ac0eff32408557830526de66a5dbe48e11bc7b` also passed
+[run 43454757280](https://github.com/raleonys/mithrilhook/actions/runs/43454757280).
+The two revisions have identical repository trees. Later documentation changes
+do not give these runs a new source identity; use their exact revisions when
+citing the results.
 
-- Source/export/branding inventory verification and whitespace checks.
-- GCC 14.2 x64 portable Debug build with AddressSanitizer and
-  UndefinedBehaviorSanitizer, with UBSAN_OPTIONS=halt_on_error=1: 2/2 CTest
-  cases passed. The actual decoder passed 112 checks across byte alignments;
-  the actual relocator passed 11 checked-relocation/boundary assertions.
-- GCC 14.2 x64 portable Release: 2/2 CTest cases passed.
-- Zig 0.14.1 / Clang 19.1.7 Windows x64 and x86 Release cross-builds: static
-  library and all configured native test targets compiled and linked. The
-  final build logs contain zero compiler warnings and errors.
-- Windows x64 and x86 Release shared-library cross-builds: compiled/linked.
-  Independent PE parsing verified exactly 13 MTH exports, no extra ordinal
-  exports, and the MithrilHook product resource in both DLLs.
-- Six exact-failure control sources were generated from the pinned engine:
-  create/remove/enable/queue/apply cleanup barriers and stale disable action.
-  Their binaries cross-built; their Windows execution is still pending.
+| Configuration | Native CTest executions | Result |
+| --- | ---: | --- |
+| MSVC x64 Debug static | 23 | PASS |
+| MSVC x64 Release static | 23 | PASS |
+| MSVC x64 Release shared | 23 | PASS |
+| clang-cl x64 Release static | 23 | PASS |
+| MSVC Win32 Debug static | 18 | PASS |
+| MSVC Win32 Release static | 18 | PASS |
+| MSVC Win32 Release shared | 18 | PASS |
+| Linux portable Debug ASan/UBSan | 2 portable tests | PASS |
 
-The portable tests project only Windows memory-query/protection boundaries.
-They do not execute native Windows suspension or callbacks. Cross-compilation
-is a build result, not Windows execution. No Wine/native/game PASS is inferred.
+This is 146 native test executions plus two portable tests. Nine precise
+negative controls apply to x64, eight to Win32. The genuine thread-churn fixture
+uses 50 transactions per run. Shared-library verification checks exactly 13
+public MTH exports and the MithrilHook product resource.
 
-An initial UBSan run detected misaligned multi-byte decoder loads. The modified
-HDE reads and relocation displacement stores now use memcpy. The same test
-passes with undefined-behavior failures configured to stop execution.
+The MSVC x64 Release artifact for the reviewed PR head records 139 genuine
+runtime-function/virtual-unwind checks and 290 registry/retirement failure
+checks. The latter use native registry APIs with projected peer scheduling;
+they are not 290 independent real-thread schedules. Owned assembly source and
+trampoline calls execute, including enable/detour/original/disable behavior.
+See [Unwind support](UNWIND.md) for the supported metadata subset.
 
-## Accepted predecessor native evidence
+All seven native configurations accept create/remove for the eleven observed
+Windows API targets. The current production target probe fails if any is
+refused. It does not enable those hooks or execute those Windows targets.
+This result is distinct from actual eleven-hook application acceptance.
 
-Master 742d6a7685a6c8c71f8210d8ea35f731e2864b28 passed all seven native Windows
-configurations and Linux portable checks:
-https://github.com/raleonys/mithrilhook/actions/runs/43434695722.
-That run executed 109 native tests (16 per x64 configuration and 15 per Win32
-configuration), plus two portable tests. The original six precise negative
-controls executed under Windows; the prior local-only pending statements above
-describe their earlier verification stage.
+## What these checks do not establish
 
-## Current audit candidate
+- Comparative hook-engine performance: there is no retained reproducible timing
+  suite or result for the alternatives. Test durations and the guard-removal
+  compatibility comparison are not benchmarks. See [Benchmarks](BENCHMARKS.md).
+- Citrine/game startup, live hook behavior, rollback, shutdown or DLL unload
+  acceptance with MithrilHook integrated.
+- Execution across every Windows release/build or target CPU. Current native
+  CI runs on `windows-2022`; changing Windows API prologues can change support.
+- General handler-scope translation, arbitrary unwind/ISA support, a universal
+  thread-birth barrier or all-or-nothing multi-hook writes. These boundaries
+  remain documented in [Safety](SAFETY.md).
 
-The thread/batch/unwind audit is described in SECURITY_AUDIT.md. The workflow
-covers MSVC x64/Win32 Debug/Release static, x64/Win32 Release shared and clang-cl
-x64 Release, plus Linux portable ASan/UBSan checks. There are 23 native tests on
-x64 and 18 on Win32: 146 executions across the seven cells. X64-only relocation
-and runtime-function/unwind fixtures are not claimed as Win32 execution. Nine
-precise negative controls apply to x64, eight to Win32. The bounded genuine
-thread-churn fixture uses 50 transactions per run.
+Outstanding acceptance work and optional extensions are tracked in
+[Remaining work](REMAINING_WORK.md). No stable release has been published.
 
-Cross-builds and source checks do not establish native acceptance for these new
-bytes. Use the exact candidate head's checks at
-https://github.com/raleonys/mithrilhook/actions/workflows/validation.yml.
-Consumer integration and actual application/game startup, rollback, shutdown
-and unload acceptance remain separate work.
+## Historical stages
 
-The current target probe requires all eleven pinned-runner create/remove
-classifications to succeed; a refusal fails its CTest case. This stronger gate
-does not turn create/remove into API execution or application acceptance.
+| Stage | Source/run | Evidence and boundary |
+| --- | --- | --- |
+| Initial local core | `metadata/LOCAL_VALIDATION.json` | Portable Debug/Release 2/2, x64/x86 cross-builds and 13-export PE checks. Its original native/publication PENDING fields are a historical snapshot, not current status. |
+| Core and branding predecessor | `742d6a7685a6c8c71f8210d8ea35f731e2864b28`, [43434695722](https://github.com/raleonys/mithrilhook/actions/runs/43434695722) | 109 native executions plus two portable tests; six precise Windows negative controls. |
+| Refusal-only thread/batch/unwind audit | `00c5f9a7cc4bfed1517a43e9dd9df9d8eaef2b93`, [43441584117](https://github.com/raleonys/mithrilhook/actions/runs/43441584117) | 138 native executions plus two portable tests, but only 3/11 x64 targets accepted; Win32 11/11. That stage was not ready for eleven-hook integration. |
+| Owned-unwind follow-up | `e5ac0eff32408557830526de66a5dbe48e11bc7b`, [43454757280](https://github.com/raleonys/mithrilhook/actions/runs/43454757280) | 146 native executions plus two portable tests; x64/Win32 create/remove 11/11. Same tree as the merged runtime source above. |
+
+The initial local UBSan run detected unaligned decoder accesses. The corrected
+HDE reads and relocation displacement stores use memcpy, with undefined
+behavior configured to stop the sanitizer tests. Portable execution projects
+Windows memory-query/protection boundaries; it does not execute native Windows
+suspension. Cross-compilation is a build result, not Windows execution.
 
 ## Inherited reference evidence
 
-The pinned SAFE-FREEZE predecessor has native verification documented at
-https://github.com/cyanoleon/minhook/actions/runs/43374271934.
-The Citrine #363 source has focused Debug/Release 19/19 results at
-https://github.com/raleonys/citrine-eclipse-mirage/actions/runs/43391349173.
-These are reference results for their own source bytes. They do not validate
-MithrilHook's renamed API, strict-only source, new alignment/reentry checks or
-its final binaries. Read SAFETY.md for the remaining engineering boundaries.
+The pinned SAFE-FREEZE predecessor has native verification in
+[cyanoleon run 43374271934](https://github.com/cyanoleon/minhook/actions/runs/43374271934).
+Citrine #363 has focused Debug/Release 19/19 results in
+[run 43391349173](https://github.com/raleonys/citrine-eclipse-mirage/actions/runs/43391349173).
+These runs validate their own recorded source bytes, not later MithrilHook
+sources or binaries. Historical evidence is retained without rewriting its
+original hashes or pending fields.

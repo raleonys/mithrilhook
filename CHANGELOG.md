@@ -1,44 +1,77 @@
 # MithrilHook development history
 
-## 0.1.0 development candidate
+There is no published release or release tag. The CMake project version is
+0.1.0; the entries below describe development milestones, not stable releases.
 
-- Register owned x64 unwind metadata for supported relocated prefixes, with a
-  synthetic prologue covering the jump-back and an unchanged 64-byte code limit.
-  Generated nonleaf entries use version 2 on Windows 10 and later; older or
-  unknown systems retain strict refusal for those prefixes.
-- Keep runtime-table registry calls outside owned suspension windows; retain
-  and recover registration/deletion/storage failures without losing owners.
-- Require all eleven pinned-runner targets to pass create/remove classification;
-  add native virtual-unwind, owned-code execution and registry failure cases.
+## Unreleased
+
+- Correct stale unmerged/native-pending wording and link exact source revisions
+  to their completed Windows validation.
+- Separate the refusal-only unwind audit from the later generated-metadata
+  implementation so historical behavior is not presented as the current core.
+- Record the missing comparative hook benchmark evidence and distinguish
+  remaining acceptance work from documented engineering boundaries.
+
+## Merged development milestones
+
+### Owned x64 trampoline unwind metadata — [PR #4](https://github.com/raleonys/mithrilhook/pull/4)
+
+- Restore create/remove support for all eleven observed application targets on
+  the pinned x64 Windows runner; Win32 also accepts all eleven. The production
+  probe now fails on any refusal. These probes do not enable or execute the
+  actual Windows API targets.
+- Generate bounded version-2 runtime metadata for supported version-1 source
+  prefixes on Windows 10 and later. Cover the complete jump-back so Windows
+  does not misclassify FF25 as an already-restored tail epilogue. Older or
+  unknown systems retain strict refusal when nonleaf metadata is needed.
+- Keep the executable code budget at 64 bytes within fixed-address 256-byte
+  x64 slots. Register metadata and flush generated code before publication.
+- Retain exact owners after registration, deletion, publication cleanup or
+  memory-release rollback failures. Retry registry operations outside owned
+  suspension windows, under the consumer's closed-admission/drain protocol.
+- Add genuine virtual-unwind and owned-code execution cases, native registry
+  failure cases with projected peers, and older/unknown OS refusal controls.
+- Refresh generated negative controls when their source or inventory changes.
+- Complete 146 native test executions and two portable ASan/UBSan tests at the
+  PR head and merged master. Exact revisions and runs are in
+  [Validation](docs/VALIDATION.md).
+
+### Thread coverage and partial-batch audit — [PR #3](https://github.com/raleonys/mithrilhook/pull/3)
+
 - Reconcile suspended peer IPs against physically committed hook transitions
   after preparation or partial-batch failures; retain failed repairs for retry.
 - Recheck live peer coverage after suspension and refuse an observed late birth
-  before patching or retiring generated code.
-- Reject registered x64 targets whose relocated prefix needs unwind operations,
-  language handlers or chained metadata that the trampoline does not provide.
-- Add deterministic failure cases, genuine runtime-function/unwind checks and
-  precise reconciliation/coverage/unwind negative controls.
-- Report the eleven create-only target classifications and compare x64 results
-  with the unwind guard removed; unsupported targets remain integration blockers.
+  before patching or retiring generated code. The final observation window
+  remains a documented consumer-coordination boundary.
+- Introduce conservative x64 unwind refusal and exact reconciliation, coverage
+  and missing-metadata controls. This historical guard accepted only 3/11 x64
+  targets and was superseded by PR #4's bounded generated-metadata support.
 - Apply the approved five-pixel logo alignment without regenerating the artwork.
-- Established an independent MTH API, MithrilHook package/DLL identity and CMake
-  target; removed the legacy compatibility header and inherited build products.
-- Integrated strict SAFE-FREEZE, all five mutation cleanup barriers, correct
+
+### Branding and license clarification — [PR #2](https://github.com/raleonys/mithrilhook/pull/2)
+
+- Include the approved MithrilHook logo in the README and installed package,
+  and document its visual identity.
+- Distinguish the GPL-3.0-only distribution license from retained third-party
+  BSD notices and provenance.
+
+### Independent strict core — [PR #1](https://github.com/raleonys/mithrilhook/pull/1)
+
+- Establish the independent MTH API, MithrilHook package/DLL identity and CMake
+  target; remove the legacy compatibility header and inherited build products.
+- Integrate strict SAFE-FREEZE, all five mutation cleanup barriers, correct
   disable IP relocation, completion journaling, cache publication checks and
   retryable generated-code/buffer/heap retirement.
-- Integrated Citrine PR #363 bounded code reads, signed RIP displacement checks,
+- Integrate Citrine PR #363 bounded code reads, signed RIP displacement checks,
   EIP wrapping and VEX/relative-instruction classification fixes.
-- Replaced unaligned multi-byte decoder loads and displacement stores with
-  memcpy-based access; added alignment regressions.
-- Rejected guarded/nonaccessible target and detour regions before hook allocation.
-- Added same-thread reentry detection and diagnostics without a recursive lock.
-- Retained native injected-failure, real-peer, leaf-call, retirement and cleanup
-  controls and added a reproducible source inventory.
-- Run feature-branch validation through pull requests and reserve push validation
-  for main branches, avoiding duplicate checks on the same pull-request commit.
-- Include the approved MithrilHook logo in the README and installed package,
-  document its visual identity, and distinguish the GPL-3.0-only distribution
-  license from retained third-party BSD notices.
+- Replace unaligned multi-byte decoder loads and displacement stores with
+  memcpy-based access; add alignment regressions.
+- Reject guarded/nonaccessible target and detour regions before hook allocation.
+- Add same-thread reentry detection and diagnostics without a recursive lock.
+- Retain injected-failure, real-peer, leaf-call, retirement and cleanup controls
+  and add a reproducible source inventory.
+- Validate feature branches through pull requests and reserve push validation
+  for main branches, avoiding duplicate checks for the same PR commit.
 
-This entry describes an unmerged development candidate, not a published stable
-release or native acceptance of the final MithrilHook source.
+Comparative performance and application/game acceptance remain open; see
+[Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
