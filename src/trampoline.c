@@ -364,6 +364,17 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
 
         if (oldPos < sizeof(JMP_REL))
         {
+            /* SYSCALL publishes its following IP in RCX. No privilege-
+             * transition/exception-return translation contract is provided;
+             * never publish copied gates, traps or far returns as ordinary
+             * position-independent instructions. Near CALL/RET are separate. */
+            if ((hs.opcode == 0x0F && (hs.opcode2 == 0x05 || hs.opcode2 == 0x07 ||
+                    hs.opcode2 == 0x34 || hs.opcode2 == 0x35 || hs.opcode2 == 0xAA)) ||
+                hs.opcode == 0xCC || hs.opcode == 0xCD || hs.opcode == 0xCE ||
+                hs.opcode == 0xCF || hs.opcode == 0xF1 || hs.opcode == 0xCA ||
+                hs.opcode == 0xCB || hs.opcode == 0x9A || hs.opcode == 0xEA ||
+                (hs.opcode == 0xFF && (hs.modrm_reg == 3 || hs.modrm_reg == 5)))
+                return FALSE;
             /* A copied x87 operation can publish its new IP via a later
              * environment save, even beyond this prefix. There is no bounded
              * FIP translation contract. Refuse the entire copied x87 class,

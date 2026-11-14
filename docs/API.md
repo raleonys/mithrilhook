@@ -35,6 +35,21 @@ are refused, not emulated with stack operations that bypass control-flow
 mitigations. Ordinary relative CALL remains supported within the documented
 scope; general return-address introspection is not preserved by relocation.
 
+A copied SYSCALL returns MTH_ERROR_UNSUPPORTED_FUNCTION before publication:
+the architectural next-RIP value exposed in RCX would otherwise refer to the
+trampoline. No kernel-transition or exception-return translation is provided.
+Copied SYSRET, SYSENTER, SYSEXIT and RSM, software interrupt/trap forms
+(INT/INT3/INTO/ICEBP), IRET, far CALL/JMP and far RET are explicitly refused as
+separate unsupported classes. Privileged and architecture-inapplicable cases
+are never executed by the acceptance tests. Ordinary near CALL/RET keep their
+existing contract. This finite policy is not a general privileged-ISA decoder.
+
+A system transition entirely after the copied ordinary prefix stays at its
+source IP. The x64 acceptance fixture uses a bounded no-argument
+NtYieldExecution service from an owned source body, reading its service number
+from the loaded ntdll stub. It does not hook the OS stub or infer a native x86
+system-service ABI from the x64 fixture.
+
 Copied x87 instructions (D8 through DF) return MTH_ERROR_UNSUPPORTED_FUNCTION
 before publication. Moving a producer changes the saved FPU instruction pointer,
 which FNSTENV/FSTENV, FNSAVE/FSAVE, FXSAVE or a later state save can expose.

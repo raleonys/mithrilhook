@@ -22,9 +22,9 @@ benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
 ## Completed runs and current version
 
-The current distribution is 1.0.1. Its fresh exact-source broad run is tracked
-in [PR #19](https://github.com/raleonys/mithrilhook/pull/19). Earlier RC reports
-retain their original version and commit; they are not renamed as 1.0.1 results.
+The current distribution is 1.0.2. Its fresh exact-source broad run is tracked
+in [PR #20](https://github.com/raleonys/mithrilhook/pull/20). Earlier RC reports
+retain their original version and commit; they are not renamed as 1.0.2 results.
 
 - Broad #12-era source `f1f32266b5d0392a830269ef9c5894099126d60e`,
   [43477964529](https://github.com/raleonys/mithrilhook/actions/runs/43477964529):
@@ -44,6 +44,11 @@ retain their original version and commit; they are not renamed as 1.0.1 results.
   all five environments and five independent offline re-audits passed,
   10,640 positive children. This predates #18's internal-CALL refusal; it is
   not a timing measurement of the later source.
+
+- The unpublished 1.0.1 source `2860e5d71565eaf9ce64662ac238fe29f4d4a3bf`,
+  [43514812907](https://github.com/raleonys/mithrilhook/actions/runs/43514812907):
+  five environments and five independent offline audits passed, 10,640 positive
+  children. It includes #19, predates #20 and is not relabeled as 1.0.2.
 
 ## Immutable candidates and build context
 
