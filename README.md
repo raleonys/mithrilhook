@@ -23,8 +23,9 @@ unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 
 The 1.0.3 source combines [PR #21](https://github.com/raleonys/mithrilhook/pull/21)'s
 undefined-trap refusal with [PR #22](https://github.com/raleonys/mithrilhook/pull/22)'s
-occupied-slot retirement correction. Publication is paused by the owner; setting
-VERSION does not create a tag or release. Completed validation and performance
+occupied-slot retirement correction, plus [PR #23](https://github.com/raleonys/mithrilhook/pull/23)'s
+complete byte-window stack-owner scan. Publication is paused by the owner;
+setting VERSION does not create a tag or release. Completed validation and performance
 records identify their exact sources. See [Validation](docs/VALIDATION.md),
 [Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 

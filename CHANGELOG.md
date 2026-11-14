@@ -105,7 +105,7 @@ by their resulting behavior and links the implementing pull requests.
 
 Exact revisions, configurations and completed runs are recorded in
 [Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
-combined PR [#22]. Earlier results keep their original source identities.
+current PR [#23]. Earlier results keep their original source identities.
 Library publication is owner-controlled after the selected source's correctness,
 package, performance and source/license review. Citrine integration and actual
 application/game lifecycle acceptance are the following engineering phase.

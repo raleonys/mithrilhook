@@ -15,7 +15,7 @@ current behavior and links implementation PRs. The earlier 0.1.0,
 1.0.0-rc.1 and unpublished 1.0.1/1.0.2 development identifiers are not listed as prior stable releases.
 
 Use the exact committed source for correctness, installed-package verification
-and comparative performance. PR #22 records the combined-source checks;
+and comparative performance. PR #23 records the current corrected-source checks;
 older benchmark records retain their measured source/versions and are not
 renamed to 1.0.3. Benchmark artifacts record commits, manifests, executable
 receipts, raw samples, checksums, compatibility and audit results.

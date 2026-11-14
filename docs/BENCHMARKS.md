@@ -22,19 +22,26 @@ benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
 ## Completed runs and current version
 
-The prepared distribution is 1.0.3. Its combined-source broad run is tracked
-in [PR #22](https://github.com/raleonys/mithrilhook/pull/22). Earlier records retain
-their original version and commit; no predecessor result is renamed as 1.0.3.
-Combined source `f638fa03e7f5aaf72945243e97e94117de9620c7` passed all five
-jobs in [43556129567](https://github.com/raleonys/mithrilhook/actions/runs/43556129567):
+The prepared distribution remains 1.0.3 and includes the unaligned-stack
+retirement correction in [PR #23](https://github.com/raleonys/mithrilhook/pull/23).
+Corrected source `8464e2733095992edf60b99805b80ffbdedab5de` passed all five jobs in
+[43560037534](https://github.com/raleonys/mithrilhook/actions/runs/43560037534):
 eight engines, 38 workloads, seven paired rounds and 10,640 isolated positive
-children. Artifact digests and exact source/version identities were verified;
-all five retained datasets passed independent Linux offline audits of raw
-streams, checksums, recipes, identities and recomputed statistics. All five
-actual-API create/remove probes accepted 11/11 targets without enabling or
-executing those system functions. Detailed timings and raw evidence are retained
-with that run and in the prepared unpublished asset bundle. This is measured
-source evidence, not application acceptance or an equivalent-safety ranking.
+children. Artifact digests, exact source/version identities and five independent
+Linux offline audits of streams, checksums, recipes and recomputed statistics
+passed. Every actual-API create/remove probe accepted all eleven targets;
+those system functions were never enabled or executed.
+
+Timings, paired intervals, CSV/plots and raw evidence identify this measured
+source. Expanded stack scanning affects retirement; results are controlled-fixture
+measurements, not application acceptance or an equivalent-safety ranking.
+A later documentation-only commit does not relabel these measured bytes.
+
+The pre-#23 source `f638fa03e7f5aaf72945243e97e94117de9620c7` passed
+[43556129567](https://github.com/raleonys/mithrilhook/actions/runs/43556129567),
+all five environments, 10,640 positive children and five independent audits.
+It contains the earlier trap/occupied-slot corrections but predates byte-window
+stack scanning; its values remain predecessor evidence.
 
 The previous unpublished 1.0.2 source `48fbc8e53f84c19347fb9419239165c59955cc43`
 passed all five environments in

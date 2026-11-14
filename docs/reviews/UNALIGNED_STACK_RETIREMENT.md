@@ -124,9 +124,24 @@ committed stack padding. It externally suspends that worker, saves context and
 stack bytes, places the real published pointer at every alignment and across two
 read boundaries, requires both refusals, restores the exact bytes, then resumes
 and joins the worker before successful retirement. No target or original is
-executed. Genuine Windows results remain pending; portable decoder/relocator
-sanitizers pass but do not execute this retirement path.
+executed. Genuine Windows run
+[43560037514](https://github.com/raleonys/mithrilhook/actions/runs/43560037514)
+passes all seven cells on `8464e2733095992edf60b99805b80ffbdedab5de`: 273 native
+Windows/package tests plus two portable tests, 178 real fixture checks per x64
+cell and 94 per Win32 cell, and the exact stepping control on every cell. The
+projected completion suite reports 10,104 x64 and 9,272 Win32 assertions.
+Both shared cells pass 250 independent live-call processes each, 400,000 combined
+transitions and 356,183,335 actual calls with zero bad results/residual handles.
+Portable decoder/relocator sanitizers pass but do not execute this retirement path.
 
 VERSION remains the unpublished owner-selected 1.0.3. Earlier prepared archives
 predate this correction and must not be treated as corrected packages. No tag,
 draft or release is created by this work.
+
+The same corrected source passed the full five-environment, eight-engine,
+38-workload comparison in
+[43560037534](https://github.com/raleonys/mithrilhook/actions/runs/43560037534):
+10,640 positive children and five independent retained-evidence audits. Detailed
+retirement and call timing distributions retain their exact source and host
+identities; this is not a same-host before/after regression experiment or
+application acceptance.
