@@ -2,12 +2,14 @@
 
 ## Version and exact source identity
 
-The prepared distribution version is 1.0.3, with no prerelease suffix. The source
-combines PR #21's copied undefined-trap refusal and PR #22's live-slot ownership
-correction on the merged PR #20 baseline, plus PR #23's byte-window stack scan.
-Publication remains paused until the
-owner explicitly says to publish. Completed results below identify measured
-sources; changing metadata does not transfer earlier evidence to new bytes.
+**Distribution version: 1.0.4.** The release includes all corrections through
+PR #23. The exact tag/commit/tree, fresh native and benchmark workflow runs,
+artifact hashes and independent audit results are recorded in the published
+[1.0.4 validation asset](https://github.com/raleonys/mithrilhook/releases/download/v1.0.4/MithrilHook-1.0.4-VALIDATION.json).
+The [release page](https://github.com/raleonys/mithrilhook/releases/tag/v1.0.4)
+also retains installed packages, native logs and complete benchmark evidence.
+Historical results below validate only their recorded sources; version and
+documentation changes do not transfer their evidence to different bytes.
 
 The validation matrix contains four x64 cells (MSVC Debug/Release static,
 MSVC Release shared and clang-cl Release static) and three Win32 MSVC cells
@@ -32,8 +34,8 @@ the exact refusal assertion. Word-PUSH
 range checks are structural; the registered native execution/unwind fixture
 uses ABI-describable eight-byte stack allocations.
 
-For 1.0.3 each installed consumer leaves prerelease consent disabled, accepts
-exact 1.0.3 and compatible 1.0 requests, rejects major 2, and verifies full/numeric
+For 1.0.4 each installed consumer leaves prerelease consent disabled, accepts
+exact 1.0.4 and compatible 1.0 requests, rejects major 2, and verifies full/numeric
 metadata before linking and running.
 Shared builds verify thirteen exact exports, product identity, numeric/full
 version resources and a clear prerelease flag against VERSION.
@@ -48,7 +50,7 @@ only; native x86 does not execute a guessed service ABI. The exact guard-removal
 control must exit 1 at its specific publication refusal. Previous CALL/x87
 controls remain in the full matrix.
 
-## Added 1.0.3 acceptance
+## Release acceptance matrix
 
 The matrix registers 41 tests per x64 cell and 34 per Win32 cell: 266 engine
 executions and seven installed consumers, 273 native total, plus two portable
@@ -64,6 +66,8 @@ as an exact negative control. Both Release shared cells run 250 independent
 live-call processes: 5,000 sessions and 200,000 patch transitions per architecture,
 with first-call teardown, zero bad results and zero residual handles required.
 No retry-only success is accepted.
+
+## Historical 1.0.3 trap and occupied-slot evidence
 
 Combined source `f638fa03e7f5aaf72945243e97e94117de9620c7` passed
 [43556129592](https://github.com/raleonys/mithrilhook/actions/runs/43556129592):
@@ -85,7 +89,7 @@ two combined-source runs total 1,000 independent processes, 20,000 sessions,
 residual handles. These results belong to their recorded commits, not
 subsequent documentation bytes.
 
-## PR #23 stack-owner acceptance
+## Historical PR #23 stack-owner acceptance
 
 The new production-linked fixture keeps a real Windows peer externally
 suspended, saves its exact stack/context, places the actual published original
@@ -160,8 +164,9 @@ not establish actual eleven-hook Citrine acceptance.
 
 ## Earlier provenance
 
-The initial local snapshot in metadata/LOCAL_VALIDATION.json keeps its original
-pending fields. The branding predecessor `742d6a7685a6c8c71f8210d8ea35f731e2864b28`
+The initial snapshot is archived unchanged as
+[INITIAL_LOCAL_VALIDATION.json](../metadata/history/INITIAL_LOCAL_VALIDATION.json).
+Its pending fields describe that initial development snapshot, not this release. The branding predecessor `742d6a7685a6c8c71f8210d8ea35f731e2864b28`
 passed [43434695722](https://github.com/raleonys/mithrilhook/actions/runs/43434695722)
 with 109 native + two portable tests. The conservative refusal-only unwind stage
 `00c5f9a7cc4bfed1517a43e9dd9df9d8eaef2b93` passed

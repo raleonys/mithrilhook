@@ -1,5 +1,11 @@
 # Thread coverage, partial batches and x64 unwind audit
 
+**Historical audit, resolved in the release.** The thread/batch and bounded
+unwind fixes below are included in 1.0.4. Later relocation/retirement findings
+are tracked in the resolved [review records](reviews/UNALIGNED_STACK_RETIREMENT.md)
+and [changelog](../CHANGELOG.md). Current limits and evidence are in
+[Safety](SAFETY.md) and [Validation](VALIDATION.md).
+
 Audit base: accepted master `742d6a7685a6c8c71f8210d8ea35f731e2864b28`.
 PR #3 introduced the thread/batch fixes and a refusal-only unwind guard. PR #4
 added the owned-unwind follow-up and is merged as
@@ -140,7 +146,7 @@ assumption. Both probe processes must complete their owner cleanup successfully;
 neither enables hooks or claims execution compatibility. Summaries are printed
 in the workflow log as well as retained in the CTest artifact.
 
-The same change includes the owner-approved original-logo alignment. It uses
-the original raster artwork with an integer five-pixel translation, preserves
-the wordmark and replaces no design through generative redrawing. It is included
-with this substantive safety work rather than submitted as an asset-only PR.
+That historical change included an integer five-pixel alignment of the earlier
+logo. PR #20 later replaced it with a new owner-supplied master PNG. Version
+1.0.4 preserves the replacement bytes exactly, with no translation or redraw;
+[Branding](BRANDING.md) and metadata/BRANDING.json identify the current artwork.

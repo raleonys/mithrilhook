@@ -27,7 +27,7 @@ before publication on Windows 10 and later. Older or unknown systems retain
 strict refusal when nonleaf metadata is needed. Unknown/chained source formats, untranslated handler-bearing
 bodies, interior nonleaf entries and undescribed stack/frame changes return
 MTH_ERROR_UNSUPPORTED_FUNCTION. Registration failures return
-MTH_ERROR_MEMORY_PROTECT without publishing an original. See UNWIND.md.
+MTH_ERROR_MEMORY_PROTECT without publishing an original. See [Unwind support](UNWIND.md).
 
 A copied CALL-next/get-PC idiom or unsupported x64 REX2/APX instruction returns
 MTH_ERROR_UNSUPPORTED_FUNCTION before original-pointer publication. These forms
@@ -117,7 +117,7 @@ state records written bytes and completion ownership remains reachable. New
 mutations must recover pending completion first. Partial block retirement
 allows only further teardown. MTH_ERROR_MEMORY_PROTECT can therefore indicate
 incomplete native preparation, completion, retirement or cleanup; it is not
-permission to discard the owner. See SAFETY.md for the consumer protocol.
+permission to discard the owner. See [Safety](SAFETY.md) for the consumer protocol.
 
 After failed preparation or a partial batch, peer IPs are reconciled to physical
 hook state before resumption. A failed context repair remains an owned retryable

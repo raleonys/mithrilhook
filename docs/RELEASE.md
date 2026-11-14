@@ -1,55 +1,71 @@
-# Release preparation
+# MithrilHook 1.0.4 stable release
 
-The prepared distribution version is **1.0.3**. VERSION is canonical. CMake,
-installed packages and Windows file/product resources all use 1.0.3, without
-an RC suffix. DLL resources clear the prerelease flag. Setting this version
-does not itself create a GitHub release or tag. Publication is paused until the
-owner explicitly says to publish. No tag, draft or release is created by this work.
+The distribution version is **1.0.4**. [VERSION](../VERSION) is canonical.
+CMake, installed package metadata and DLL file/product resources use 1.0.4
+without an RC suffix or prerelease opt-in. The DLL prerelease flag is clear.
+The owner authorized publication of the stable **v1.0.4** tag and release.
 
-## Contents and evidence
+[Official release and downloads](https://github.com/raleonys/mithrilhook/releases/tag/v1.0.4)
 
-The library includes the independent thirteen-export MTH API, strict ownership
-core, bounded generated unwind support and reviewed corrections through the
-undefined-trap, occupied-slot and unaligned-stack retirement corrections through PR #23. The [changelog](../CHANGELOG.md) groups
-current behavior and links implementation PRs. The earlier 0.1.0,
-1.0.0-rc.1 and unpublished 1.0.1/1.0.2 development identifiers are not listed as prior stable releases.
+## Packages and source
 
-Use the exact committed source for correctness, installed-package verification
-and comparative performance. PR #23 records the current corrected-source checks;
-older benchmark records retain their measured source/versions and are not
-renamed to 1.0.3. Benchmark artifacts record commits, manifests, executable
-receipts, raw samples, checksums, compatibility and audit results.
+The release provides these Windows x86/x64 packages:
 
-Versioned validation artifacts contain installed static/shared Debug/Release
-packages, native/consumer test logs, licenses, VERSION and the current changelog.
-Before publication inspect source provenance, thirteen exports, full/fixed
-1.0.3 resources and a clear prerelease flag. Preserve chosen source/evidence
-archives because workflow artifact retention is finite.
+| Architecture | Compiler | Configuration | Library |
+| --- | --- | --- | --- |
+| x64 | MSVC v143 | Debug | Static |
+| x64 | MSVC v143 | Release | Static |
+| x64 | MSVC v143 | Release | Shared |
+| x64 | clang-cl | Release | Static |
+| x86 | MSVC v143 | Debug | Static |
+| x86 | MSVC v143 | Release | Static |
+| x86 | MSVC v143 | Release | Shared |
 
-Distribution remains GPL-3.0-only, with original MinHook/HDE BSD and authorized
-SAFE-FREEZE notices retained. No relicensing is part of this work.
+Packages include the public header, library/import library and DLL as applicable,
+CMake package files, VERSION, installed usage/safety/unwind/branding documentation,
+the exact approved logo and distribution/upstream license notices. The installed
+`share/mithrilhook/doc` directory preserves the repository-relative `docs/` and
+`metadata/` tree so changelog and guide links resolve inside the package. Match each
+package's architecture, configuration and CRT settings; MSVC defaults to /MT or
+/MTd. Compiler-provided CRT support is used normally. MithrilHook introduces no
+external decoder, NT-header package or dependency on the application repository.
 
-## Consuming 1.0.3
+`MithrilHook-1.0.4-source.tar.gz` contains the exact tagged source. The release
+changelog includes all reviewed changes through PR #23. Earlier 0.1.0,
+1.0.0-rc.1 and prepared 1.0.1/1.0.2/1.0.3 identifiers were development versions,
+not prior public stable releases. Distribution remains GPL-3.0-only with original
+MinHook/HDE and separately authorized SAFE-FREEZE notices preserved.
 
-An unversioned package request remains available. Numeric stable requests need
-no prerelease permission:
+## Verification and evidence
+
+Download SHA256SUMS alongside the selected assets and verify their SHA-256
+hashes. The source archive, packages and validation metadata must agree on
+version 1.0.4 and the selected release commit.
+
+[Release validation identity](https://github.com/raleonys/mithrilhook/releases/download/v1.0.4/MithrilHook-1.0.4-VALIDATION.json)
+records the tag/commit/tree, workflow runs, artifact digests, package source and
+binary identities, native/portable results and independent benchmark audits.
+The release also retains native logs, raw benchmark ZIPs, the readable benchmark
+report, full timing CSV and PNG/PDF comparison. Older measurements retain their
+actual commits and versions; they are not relabeled as 1.0.4 results.
+
+## Consuming 1.0.4
 
 ```cmake
-find_package(MithrilHook 1.0.3 EXACT CONFIG REQUIRED)
+find_package(MithrilHook 1.0.4 EXACT CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE MithrilHook::mithrilhook)
 ```
 
-The package exposes MithrilHook_VERSION=1.0.3,
-MithrilHook_VERSION_NUMERIC=1.0.3 and an empty MithrilHook_PRERELEASE. Independent
-consumers verify exact 1.0.3 and compatible 1.0 discovery with prerelease consent
-disabled, reject incompatible major versions, then link and run. Match the
-package's static/shared and Debug/Release CRT settings. There is no additional
-runtime dependency or legacy API alias.
+The package exposes MithrilHook_VERSION=1.0.4,
+MithrilHook_VERSION_NUMERIC=1.0.4 and an empty MithrilHook_PRERELEASE. Independent
+consumers verify exact 1.0.4 and compatible 1.0 discovery with prerelease consent
+disabled, reject major 2, then link and execute the installed library.
+The independent API has thirteen MTH exports and no legacy aliases.
 
-## Publication and the following integration
+## Following integration
 
-After reviewing the selected source's correctness, package, performance and
-source/license evidence, the owner selects the immutable tag and assets.
-Citrine then integrates that package deliberately. Actual target prologues,
-startup, callbacks, recovery, shutdown and DLL unload remain the following
-application acceptance phase. See [Remaining work](REMAINING_WORK.md).
+Library release evidence is separate from application acceptance. Citrine
+integration must validate actual target prologues, startup, detour/original calls,
+failure recovery, callback admission/draining, shutdown and DLL unload on the
+identified deployment environment. See [Integration status](REMAINING_WORK.md),
+[API](API.md), [Safety](SAFETY.md) and [Unwind support](UNWIND.md).

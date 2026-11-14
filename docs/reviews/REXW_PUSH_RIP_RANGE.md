@@ -1,7 +1,15 @@
 # Operand-size precedence underestimates a RIP-relative PUSH access
 
+**Status: resolved and included in 1.0.4 (PR #17).** Effective REX.W precedence is included in the proven PUSH memory range.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 Reviewed master: `c02605cb041034c3158abd0f5974f3b564657e71` (merged PR #16).
-This PR records the finding without a runtime correction. Generated diagnostic
+The initial report recorded the finding before its runtime correction. Generated diagnostic
 sources and binaries remained under the review checkout's ignored `build/`
 directory.
 
@@ -89,7 +97,7 @@ PUSH r/m64 controls, overlap at both range boundaries, source/original results,
 unchanged refusal outputs, generated unwind registration, genuine Windows
 virtual unwind and complete publication/retirement cleanup.
 
-The historical finding above is preserved. This PR now also corrects effective
+The historical finding above is preserved. The subsequent implementation corrects effective
 REX.W precedence and adds prefix-order/range controls plus genuine Windows
 source/generated metadata lookup, virtual unwind, execution and retirement
 checks. Exact candidate revisions and completed runs are recorded in the PR

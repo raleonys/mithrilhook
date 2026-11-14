@@ -5,7 +5,7 @@ set(CMAKE_CONFIGURATION_TYPES Release CACHE STRING "Benchmark configuration" FOR
 if(NOT WIN32 OR NOT MSVC)
   message(FATAL_ERROR "Performance evidence requires native Windows MSVC")
 endif()
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 set(SOURCES "${REPO_ROOT}/build/bench-sources")
 set(PREPARED "${REPO_ROOT}/build/bench-prepared")

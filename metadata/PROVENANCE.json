@@ -24,6 +24,11 @@
     "conservative registered x64 unwind compatibility checks",
     "owned version-2 x64 prefix unwind metadata covering the jump-back",
     "retryable function-table/storage ownership with registry calls outside suspension windows",
-    "mandatory eleven-target create/remove compatibility gate on the pinned native runner"
+    "mandatory eleven-target create/remove compatibility gate on the pinned native runner",
+    "completed internal JMP/Jcc/LOOP instruction-boundary mapping and conservative internal CALL refusal",
+    "RIP-relative patch-window memory ranges and effective PUSH operand-size precedence",
+    "complete normal/hotpatch write-interval reservations",
+    "explicit copied x87/state/transition/undefined-trap refusal policies",
+    "occupied-slot allocation bitmap and alignment-safe byte-window peer-stack retirement scanning"
   ]
 }

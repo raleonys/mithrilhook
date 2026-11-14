@@ -1,12 +1,13 @@
 # Release and integration status
 
-The prepared source version is 1.0.3, without an RC suffix. It includes the
-merged corrections through PR #20 plus PR #21's copied undefined-trap refusal
-and PR #22's exact occupied-slot retirement checks, plus PR #23's byte-window
-stack-owner scan. Earlier 1.0.1 and 1.0.2
-preparations were not published. Tag/release publication is paused until the
-owner explicitly says to publish. Validation, review and package preparation
-may continue during that hold. Citrine integration remains a later task.
+**Library version: 1.0.4.** The official release incorporates all reviewed
+corrections through PR #23: strict ownership, peer/batch repair, bounded generated
+unwind, relocation refusals, occupied-slot tracking and complete byte-window
+stack scanning. The owner authorized tag/release publication after the final
+source/package/evidence checks. Earlier prepared versions were not published.
+[Release assets](https://github.com/raleonys/mithrilhook/releases/tag/v1.0.4)
+retain the selected source and validation identities. Citrine integration is
+the next independent engineering phase.
 
 ## Library release gates
 
@@ -16,7 +17,7 @@ may continue during that hold. Citrine integration remains a later task.
 | Installed package and DLL identity | All seven fresh consumers link/run with matching CRT settings; stable numeric version compatibility and DLL numeric/full/prerelease metadata match VERSION. |
 | Comparative performance | Review the selected source's exact-head five-environment run, raw recipe/checksums, source/binary identities and recomputed results. Earlier #12 measurements remain historical. See [Benchmarks](BENCHMARKS.md). |
 | Release content | Review the changelog, documented support/refusal scope, GPL/BSD provenance and versioned validation artifacts. VERSION and package/resource metadata must agree. |
-| Publication | The owner selects the immutable release commit, tag and assets after reviewing these gates. Setting VERSION does not create a GitHub release or tag. See [Release preparation](RELEASE.md). |
+| Publication | The authorized v1.0.4 release pins the selected commit, packages, raw evidence and checksums. See [Release and packages](RELEASE.md). |
 
 ## Next engineering phase: Citrine integration
 

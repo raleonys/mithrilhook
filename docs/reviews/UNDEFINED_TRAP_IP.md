@@ -1,5 +1,13 @@
 # Copied undefined-instruction traps expose the trampoline exception address
 
+**Status: resolved and included in 1.0.4 (PR #21).** Copied UD0/UD1/UD2 are refused before original publication.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 ## Review status
 
 The correction refuses copied UD0/UD1/UD2 before original publication. The

@@ -1,7 +1,15 @@
 # Overlapping hook patch ranges are accepted and corrupt the first hook
 
+**Status: resolved and included in 1.0.4 (PR #16).** Complete normal/hotpatch physical intervals are reserved before publication.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 Reviewed master: `af6675f63f6f94732e6000b9d528b3ddc0a4330c` (merged PR #14).
-This PR records the finding without a runtime correction. Generated diagnostic
+The initial report recorded the finding before its runtime correction. Generated diagnostic
 sources and binaries remained under the review checkout's ignored `build/`
 directory.
 
@@ -67,7 +75,7 @@ controls, individual enable, all-hooks enable, queued apply, removal in both
 orders, restored source bytes and native Windows execution/cleanup. The chosen
 public refusal status must be documented and must not publish `ppOriginal`.
 
-The historical reproduction above is preserved. This PR now also implements
+The historical reproduction above is preserved. The subsequent implementation implements
 interval reservation under the engine lock before publication, with the
 documented unsupported status and unchanged output/bytes on refusal. It adds
 public-API native execution/retirement cases, normal/hotpatch interval-boundary

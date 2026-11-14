@@ -58,10 +58,16 @@ if(WIN32)
   install(FILES VERSION DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook)
   install(FILES LICENSE LICENSE.txt LICENSE.SAFE_FREEZE THIRD_PARTY_NOTICES.txt DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/licenses)
   install(FILES resources/branding/mithrilhook.png DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/branding)
-  install(FILES CHANGELOG.md docs/BRANDING.md docs/API.md docs/SAFETY.md docs/UNWIND.md DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/doc)
+  # Preserve repository-relative documentation links in installed packages.
+  install(FILES CHANGELOG.md VERSION LICENSE LICENSE.txt LICENSE.SAFE_FREEZE THIRD_PARTY_NOTICES.txt
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/doc)
+  install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/doc/docs)
+  install(FILES metadata/BRANDING.json metadata/FIXES.json metadata/PROVENANCE.json
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/doc/metadata)
+  install(DIRECTORY metadata/history/ DESTINATION ${CMAKE_INSTALL_DATADIR}/mithrilhook/doc/metadata/history)
   if(BUILD_TESTING)
     enable_language(CXX)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
     add_subdirectory(tests)
   endif()
 elseif(BUILD_TESTING)

@@ -20,10 +20,22 @@ MinHook-Detours, nor call-through latency. Its original safety/workload limits
 remain; values are not transferred to the new fork. Citrine's runtime-load
 benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
-## Completed runs and current version
+## 1.0.4 release evidence
 
-The prepared distribution remains 1.0.3 and includes the unaligned-stack
-retirement correction in [PR #23](https://github.com/raleonys/mithrilhook/pull/23).
+The release includes the unaligned-stack retirement correction and all reviewed
+changes through PR #23. Its fresh exact-source measurements and independently
+audited datasets are attached to the
+[official v1.0.4 release](https://github.com/raleonys/mithrilhook/releases/tag/v1.0.4).
+The [validation asset](https://github.com/raleonys/mithrilhook/releases/download/v1.0.4/MithrilHook-1.0.4-VALIDATION.json)
+pins the measured commit, workflow runs and artifact digests. The readable
+[benchmark report](https://github.com/raleonys/mithrilhook/releases/download/v1.0.4/MithrilHook-1.0.4-BENCHMARKS.md),
+full timing CSV, comparison PNG/PDF and five raw environment ZIPs are retained
+with that release. Prior reports keep their actual source and version.
+
+## Historical development measurements
+
+The following results predate public version 1.0.4 and are retained as
+historical evidence, including the unpublished 1.0.3 correction candidate.
 Corrected source `8464e2733095992edf60b99805b80ffbdedab5de` passed all five jobs in
 [43560037534](https://github.com/raleonys/mithrilhook/actions/runs/43560037534):
 eight engines, 38 workloads, seven paired rounds and 10,640 isolated positive
@@ -85,7 +97,7 @@ production and keep each engine's actual API semantics.
 | --- | --- | --- |
 | MithrilHook | Exact committed benchmark source head | Strict automatic observation, physical-state repair and retryable retirement ownership |
 | Official MinHook | `TsudaKageyu/minhook` at `8af6b4acae5a9388fd742b56fa79ece89d96f823` | Original/default freeze; separate create/enable/remove |
-| Official MinHook current stable | `TsudaKageyu/minhook` v1.3.4 at `c3fcafdc10146beb5919319d0683e44e3c30d537` | Current official original/default freeze; separate create/enable/remove |
+| Official MinHook pinned v1.3.4 | `TsudaKageyu/minhook` v1.3.4 at `c3fcafdc10146beb5919319d0683e44e3c30d537` | Pinned stable original/default freeze; separate create/enable/remove |
 | Patched predecessor | `cyanoleon/minhook` at `311c8cc96c4a9c97e89ac3fc3a3c4a5a3f10bb38`, strict ON, plus exact Citrine #363 relocator output | SAFE-FREEZE completion/retirement ownership; original MH API |
 | m417z MinHook | `m417z/minhook` at `4f18d1809a81e6c700bcc4a21aeb43ade72bbf8b` | Original freeze mode; no unsafe-none or fast-undocumented mode |
 | Microsoft Detours | `microsoft/Detours` at `1dbd4ea281d73d478aa8d09a8b83fbd265f715f7` | Attach/detach transactions; explicit UpdateThread for current and every owned idle peer |

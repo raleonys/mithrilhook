@@ -35,6 +35,8 @@ def verify():
   if re.search(r'\bMH_\w+|\bMINHOOK_\w+',source):raise ValueError('Legacy active identifier: '+str(path))
  if '#if defined(MTH_SAFE_FREEZE)' in (ROOT/'src/hook.c').read_text():
   raise ValueError('Production core must not retain an optional weaker engine')
+ from verify_docs import verify as verify_documents
+ verify_documents()
  print(f'PASS: {len(actual)} source files, {len(exports)} MTH exports, {version}, strict-only core and no legacy API aliases')
 def main():
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--refresh',action='store_true');args=parser.parse_args()
