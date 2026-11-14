@@ -104,3 +104,30 @@ jobs:
             build/package-consumer/package.xml
             build/package-consumer/Testing/Temporary/LastTest.log
             dist/install
+
+  teardown-diagnosis:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cmake -S . -B build/diagnosis -A Win32 -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON
+      - run: cmake --build build/diagnosis --config Release --target mithrilhook_live_call_contracts --parallel 2
+      - shell: python
+        run: |
+          import subprocess
+          from pathlib import Path
+          exe=Path('build/diagnosis/tests/Release/mithrilhook_live_call_contracts.exe').resolve()
+          with Path('build/diagnosis/teardown-trace.log').open('w') as output:
+              for i in range(1000):
+                  p=subprocess.run([str(exe)],capture_output=True,text=True,timeout=45)
+                  output.write(f'PROCESS {i+1} exit={p.returncode}\n'+p.stdout+p.stderr);output.flush()
+                  if p.returncode:
+                      print(p.stdout+p.stderr);raise SystemExit(p.returncode)
+                  if (i+1)%50==0:print(f'PASSED {i+1}')
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: teardown-diagnosis-trace
+          path: build/diagnosis/teardown-trace.log

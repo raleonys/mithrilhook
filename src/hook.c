@@ -44,6 +44,21 @@
     #define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
 #endif
 
+
+/* Temporary bounded diagnosis: fixed storage only during peer suspension. */
+static struct { ULONG_PTR stage, action, peer, peers, line, error, ip, sp, match, aux; } mthTrace;
+#define MTH_TRACE_FAIL(at, extra) do { if (!mthTrace.line) { mthTrace.line=__LINE__; mthTrace.error=GetLastError(); mthTrace.match=(ULONG_PTR)(at); mthTrace.aux=(ULONG_PTR)(extra); } } while(0)
+static void MthDumpTrace(void)
+{
+    static const char *keys[]={"stage","action","peer","peers","line","error","ip","sp","match","aux"};
+    ULONG_PTR values[]={mthTrace.stage,mthTrace.action,mthTrace.peer,mthTrace.peers,mthTrace.line,mthTrace.error,mthTrace.ip,mthTrace.sp,mthTrace.match,mthTrace.aux};
+    char text[512]; const char *prefix="RETIRE_TRACE"; unsigned n=0,i,j; DWORD written;
+    while(*prefix)text[n++]=*prefix++;
+    for(i=0;i<10;++i) { const char *key=keys[i];text[n++]=' ';while(*key)text[n++]=*key++;text[n++]='=';text[n++]='0';text[n++]='x';
+        for(j=0;j<sizeof(ULONG_PTR)*2;++j)text[n++]="0123456789abcdef"[(values[i]>>((sizeof(ULONG_PTR)*2-1-j)*4))&15]; }
+    text[n++]='\n';WriteFile(GetStdHandle(STD_ERROR_HANDLE),text,n,&written,NULL);
+}
+
 // Initial capacity of the HOOK_ENTRY buffer.
 #define INITIAL_HOOK_CAPACITY   32
 
@@ -493,7 +508,7 @@ static PEER_PREPARATION_RESULT CheckRetiringThread(HANDLE thread)
     UINT i, count;
     context.ContextFlags = CONTEXT_FULL;
     if (!GetThreadContext(thread, &context))
-        return ThreadNoLongerLive(thread) ? PEER_TERMINATED : PEER_UNRESOLVED;
+        { MTH_TRACE_FAIL(0, 1); return ThreadNoLongerLive(thread) ? PEER_TERMINATED : PEER_UNRESOLVED; }
 #if defined(_M_X64) || defined(__x86_64__)
     registers[0]=context.Rip; registers[1]=context.Rax; registers[2]=context.Rbx;
     registers[3]=context.Rcx; registers[4]=context.Rdx; registers[5]=context.Rsi;
@@ -510,24 +525,25 @@ static PEER_PREPARATION_RESULT CheckRetiringThread(HANDLE thread)
     count = 9;
     cursor = (ULONG_PTR)context.Esp;
 #endif
+    mthTrace.ip=registers[0];mthTrace.sp=cursor;
     for (i = 0; i < count; ++i)
         if (IsRetiringAddress(registers[i]))
-            return PEER_UNRESOLVED;
+            { MTH_TRACE_FAIL(registers[i], i); return PEER_UNRESOLVED; }
     if (!VirtualQuery((LPCVOID)cursor, &first, sizeof(first)))
-        return PEER_UNRESOLVED;
+        { MTH_TRACE_FAIL(cursor, 4); return PEER_UNRESOLVED; }
     allocation = (ULONG_PTR)first.AllocationBase;
     while (scanned < 64 * 1024 * 1024)
     {
         MEMORY_BASIC_INFORMATION region;
         ULONG_PTR limit;
         if (!VirtualQuery((LPCVOID)cursor, &region, sizeof(region)))
-            return PEER_UNRESOLVED;
+            { MTH_TRACE_FAIL(cursor, 2); return PEER_UNRESOLVED; }
         if ((ULONG_PTR)region.AllocationBase != allocation)
             return PEER_PREPARED;
         limit = (ULONG_PTR)region.BaseAddress + region.RegionSize;
         if (limit <= cursor || limit - cursor > 64 * 1024 * 1024 - scanned ||
             region.State != MEM_COMMIT || (region.Protect & (PAGE_NOACCESS | PAGE_GUARD)))
-            return PEER_UNRESOLVED;
+            { MTH_TRACE_FAIL(cursor, 2); return PEER_UNRESOLVED; }
         while (cursor < limit)
         {
             DWORD_PTR words[64];
@@ -535,15 +551,15 @@ static PEER_PREPARATION_RESULT CheckRetiringThread(HANDLE thread)
             if (bytes > sizeof(words)) bytes = sizeof(words);
             if (bytes % sizeof(words[0]) != 0 ||
                 !ReadProcessMemory(GetCurrentProcess(), (LPCVOID)cursor, words, bytes, &copied) || copied != bytes)
-                return PEER_UNRESOLVED;
+                { MTH_TRACE_FAIL(cursor, 3); return PEER_UNRESOLVED; }
             for (i = 0; i < bytes / sizeof(words[0]); ++i)
                 if (IsRetiringAddress(words[i]))
-                    return PEER_UNRESOLVED;
+                    { MTH_TRACE_FAIL(words[i], cursor+i*sizeof(words[0])); return PEER_UNRESOLVED; }
             cursor += bytes;
             scanned += bytes;
         }
     }
-    return PEER_UNRESOLVED;
+    { MTH_TRACE_FAIL(cursor, 5); return PEER_UNRESOLVED; }
 }
 
 static FROZEN_THREADS g_retainedThreads = { NULL, 0, 0 };
@@ -851,6 +867,7 @@ static MTH_STATUS VerifyFrozenThreadCoverage(PFROZEN_THREADS pThreads)
                 }
         if (!covered && !ThreadNoLongerLive(cursor))
         {
+            MTH_TRACE_FAIL(id, 8);
             result = MTH_ERROR_MEMORY_PROTECT;
             break;
         }
@@ -866,8 +883,9 @@ static MTH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
     pThreads->capacity = 0;
     pThreads->size     = 0;
 
+    mthTrace.action=action;
     if (!RetryRetainedThreadOwnership())
-        return MTH_ERROR_MEMORY_PROTECT;
+        { MTH_TRACE_FAIL(0, 6); return MTH_ERROR_MEMORY_PROTECT; }
     {
         THREAD_ENUMERATION_RESULT enumeration = EnumerateThreads(pThreads);
         if (enumeration != THREAD_ENUMERATION_OK)
@@ -898,6 +916,7 @@ static MTH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
             PFROZEN_THREAD_ITEM pItem = &pThreads->pItems[i];
             if (pItem->handle == NULL)
                 continue;
+            mthTrace.peer=pItem->threadId;mthTrace.peers=pThreads->size;
             if (SuspendThread(pItem->handle) != 0xFFFFFFFF)
             {
                 PEER_PREPARATION_RESULT peerResult;
@@ -908,6 +927,7 @@ static MTH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
             }
             else if (!ThreadNoLongerLive(pItem->handle))
             {
+                MTH_TRACE_FAIL(pItem->handle, 7);
                 status = MTH_ERROR_MEMORY_PROTECT;
             }
         }
@@ -1152,17 +1172,19 @@ MTH_STATUS WINAPI MTH_Uninitialize(VOID)
     MTH_STATUS status = MTH_ERROR_NOT_INITIALIZED;
     if (!EnterSpinLock())
         return MTH_ERROR_REENTRANT_CALL;
+    memset(&mthTrace,0,sizeof(mthTrace));mthTrace.stage=1;
     if (g_hHeap != NULL)
     {
         status = RetryRetainedThreadOwnership() ? MTH_OK : MTH_ERROR_MEMORY_PROTECT;
         if (status == MTH_OK && !g_shutdownPending)
-            status = EnableAllHooksLL(FALSE);
+            { mthTrace.stage=2;status = EnableAllHooksLL(FALSE); }
         if (status == MTH_OK)
-            status = RetireAllBuffers();
+            { mthTrace.stage=3;status = RetireAllBuffers(); }
         /* Frozen arrays belong to this heap: finish/retry their cleanup before
          * destroying it. HeapDestroy also owns the hook-entry allocation. */
         if (status == MTH_OK)
         {
+            mthTrace.stage=4;
             if (!HeapDestroy(g_hHeap))
                 status = MTH_ERROR_MEMORY_PROTECT;
             else
@@ -1174,6 +1196,7 @@ MTH_STATUS WINAPI MTH_Uninitialize(VOID)
             }
         }
     }
+    if(status!=MTH_OK)MthDumpTrace();
     LeaveSpinLock();
     return status;
 }
