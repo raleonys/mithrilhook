@@ -2,11 +2,11 @@
 
 ## Version and exact source identity
 
-The distribution version is 1.0.2, with no prerelease suffix. The source in
-[PR #20](https://github.com/raleonys/mithrilhook/pull/20) includes merged PR #19
-and the transition-instruction correction. Its Windows/package evidence belongs
-to that PR's exact head. Earlier results retain their measured source identity;
-a document or version update does not transfer evidence to different bytes.
+The prepared distribution version is 1.0.3, with no prerelease suffix. The source
+combines PR #21's copied undefined-trap refusal and PR #22's live-slot ownership
+correction on the merged PR #20 baseline. Publication remains paused until the
+owner explicitly says to publish. Completed results below identify measured
+sources; changing metadata does not transfer earlier evidence to new bytes.
 
 The validation matrix contains four x64 cells (MSVC Debug/Release static,
 MSVC Release shared and clang-cl Release static) and three Win32 MSVC cells
@@ -14,7 +14,7 @@ MSVC Release shared and clang-cl Release static) and three Win32 MSVC cells
 real owned-code execution, peer/retirement behavior and exact negative controls.
 Each cell also builds and executes an independent installed-package consumer.
 The portable decoder and relocator run under Linux ASan/UBSan; the relocator
-contains 20,436 assertions, including 511 PUSH prefix/range layouts and 1,040
+contains 143,571 assertions, including 511 PUSH prefix/range layouts and 1,040
 CALL prefix/site/destination layouts plus ten forward-entry/expansion cases.
 Internal CALL refusal is checked before output or entry-patch publication.
 A generated native negative control removes only that refusal and must exit 1
@@ -31,8 +31,8 @@ the exact refusal assertion. Word-PUSH
 range checks are structural; the registered native execution/unwind fixture
 uses ABI-describable eight-byte stack allocations.
 
-For 1.0.2 each installed consumer leaves prerelease consent disabled, accepts
-exact 1.0.2 and compatible 1.0 requests, rejects major 2, and verifies full/numeric
+For 1.0.3 each installed consumer leaves prerelease consent disabled, accepts
+exact 1.0.3 and compatible 1.0 requests, rejects major 2, and verifies full/numeric
 metadata before linking and running.
 Shared builds verify thirteen exact exports, product identity, numeric/full
 version resources and a clear prerelease flag against VERSION.
@@ -46,6 +46,23 @@ outside the copied prefix. Privileged/trap/far-return cases are structural
 only; native x86 does not execute a guessed service ABI. The exact guard-removal
 control must exit 1 at its specific publication refusal. Previous CALL/x87
 controls remain in the full matrix.
+
+## Added 1.0.3 acceptance
+
+The matrix registers 39 tests per x64 cell and 32 per Win32 cell: 252 engine
+executions and seven installed consumers, 259 native total, plus two portable
+tests. UD0/UD1/UD2 coverage adds 61,560 structural layouts (every ModR/M byte,
+five copied offsets, eight legacy-prefix choices and sixteen single REX
+prefixes), exact Windows source exception-address observations, source-resident
+trap execution and a guard-removal control with a precise exit-1 assertion.
+
+Retirement checks exercise unused/header values with actual and projected peers,
+every byte of occupied slots in registers and stack, cross-block allocation,
+failed release ownership, double-free refusal and the old whole-block predicate
+as an exact negative control. Both Release shared cells run 250 independent
+live-call processes: 5,000 sessions and 200,000 patch transitions per architecture,
+with first-call teardown, zero bad results and zero residual handles required.
+No retry-only success is accepted. Corrected-source native results are pending.
 
 ## Completed predecessor evidence
 

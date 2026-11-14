@@ -31,6 +31,8 @@
 
 // Size of each memory block. (= page size of VirtualAlloc)
 #define MEMORY_BLOCK_SIZE 0x1000
+#define MEMORY_BLOCK_SLOTS (MEMORY_BLOCK_SIZE / MEMORY_SLOT_SIZE)
+#define MEMORY_SLOT_WORDS ((MEMORY_BLOCK_SLOTS + 31) / 32)
 
 // Max range for seeking a memory block. (= 1024MB)
 #define MAX_MEMORY_RANGE 0x40000000
@@ -55,7 +57,11 @@ typedef struct _MEMORY_BLOCK
     struct _MEMORY_BLOCK *pNext;
     PMEMORY_SLOT pFree;         // First element of the free slot list.
     UINT usedCount;
+    /* Live slot ownership, independent of executable bytes and the free list.
+     * Bit zero (the allocator header) is never a published trampoline. */
+    UINT32 allocated[MEMORY_SLOT_WORDS];
 } MEMORY_BLOCK, *PMEMORY_BLOCK;
+typedef char MTH_BLOCK_HEADER_FITS[(sizeof(MEMORY_BLOCK) <= MEMORY_SLOT_SIZE) ? 1 : -1];
 
 //-------------------------------------------------------------------------
 // Global Variables:
@@ -169,7 +175,12 @@ BOOL MthInternal_IsBufferAddress(ULONG_PTR address)
     PMEMORY_BLOCK block;
     for (block = g_pMemoryBlocks; block != NULL; block = block->pNext)
         if (address >= (ULONG_PTR)block && address - (ULONG_PTR)block < MEMORY_BLOCK_SIZE)
-            return TRUE;
+        {
+            UINT index = (UINT)((address - (ULONG_PTR)block) / MEMORY_SLOT_SIZE);
+            /* Retain every byte of an occupied code/metadata slot. Unused
+             * slots and allocator bookkeeping cannot hold a published entry. */
+            return (block->allocated[index / 32] & ((UINT32)1 << (index % 32))) != 0;
+        }
     return FALSE;
 }
 
@@ -318,6 +329,7 @@ static PMEMORY_BLOCK GetMemoryBlock(LPVOID pOrigin)
         PMEMORY_SLOT pSlot = (PMEMORY_SLOT)pBlock + 1;
         pBlock->pFree = NULL;
         pBlock->usedCount = 0;
+        memset(pBlock->allocated, 0, sizeof(pBlock->allocated));
         do
         {
             pSlot->pNext = pBlock->pFree;
@@ -344,6 +356,10 @@ LPVOID MthInternal_AllocateBuffer(LPVOID pOrigin)
     pSlot = pBlock->pFree;
     pBlock->pFree = pSlot->pNext;
     pBlock->usedCount++;
+    {
+        UINT index = (UINT)(((ULONG_PTR)pSlot - (ULONG_PTR)pBlock) / MEMORY_SLOT_SIZE);
+        pBlock->allocated[index / 32] |= (UINT32)1 << (index % 32);
+    }
 #ifdef _DEBUG
     // Fill the slot with INT3 for debugging.
     memset(pSlot, 0xCC, sizeof(MEMORY_SLOT));
@@ -366,6 +382,11 @@ BOOL MthInternal_FreeBuffer(LPVOID pBuffer)
             if ((ULONG_PTR)pBuffer < (ULONG_PTR)block + MEMORY_SLOT_SIZE ||
                 ((ULONG_PTR)pBuffer - (ULONG_PTR)block) % MEMORY_SLOT_SIZE != 0)
                 return FALSE;
+            {
+                UINT index = (UINT)(((ULONG_PTR)pBuffer - (ULONG_PTR)block) / MEMORY_SLOT_SIZE);
+                if (!(block->allocated[index / 32] & ((UINT32)1 << (index % 32))))
+                    return FALSE;
+            }
             if (!UnregisterSlotUnwind(pBuffer))
                 return FALSE;
             if (block->usedCount == 1)
@@ -382,6 +403,8 @@ BOOL MthInternal_FreeBuffer(LPVOID pBuffer)
             else
             {
                 PMEMORY_SLOT slot = (PMEMORY_SLOT)pBuffer;
+                UINT index = (UINT)(((ULONG_PTR)pBuffer - (ULONG_PTR)block) / MEMORY_SLOT_SIZE);
+                block->allocated[index / 32] &= ~((UINT32)1 << (index % 32));
 #ifdef _DEBUG
                 memset(slot, 0, sizeof(MEMORY_SLOT));
 #endif

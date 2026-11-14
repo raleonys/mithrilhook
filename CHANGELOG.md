@@ -3,7 +3,7 @@
 VERSION is the canonical distribution version. This history groups changes
 by their resulting behavior and links the implementing pull requests.
 
-## [1.0.2]
+## [1.0.3] — prepared, not published
 
 ### Added
 
@@ -21,10 +21,18 @@ by their resulting behavior and links the implementing pull requests.
   negative controls, binary receipts and recomputed statistics are retained.
 - Independent installed-package consumers across static/shared, Debug/Release,
   MSVC/clang-cl and x64/Win32 builds, with actual hook/original/retirement calls.
-- A canonical VERSION file and consistent 1.0.2 CMake/package/DLL metadata,
+- A canonical VERSION file and consistent 1.0.3 CMake/package/DLL metadata,
   release resource flags and versioned validation artifacts.
 
 ### Fixed
+
+- Refuse copied UD0/UD1/UD2 before their deliberate invalid-opcode exception
+  address can move to a trampoline. Keep trap bodies after the copied prefix
+  at their source addresses and validate exact Windows exception events. ([#21])
+- Track occupied buffer slots instead of treating a complete allocation page as
+  a published trampoline. Unused-slot/header values no longer cause whole-engine
+  shutdown to refuse; every byte of live code/metadata slots still blocks unsafe
+  retirement. Preserve allocation ownership after failed release. ([#22])
 
 - Correct single-disable peer IP mapping, repair peer IPs against physically
   committed writes after partial failures, and retain failed cleanup owners.
@@ -69,9 +77,9 @@ by their resulting behavior and links the implementing pull requests.
 - Replace the master logo with the owner-supplied transparent PNG, preserving
   its exact bytes and dimensions in README and installed packages. Record the
   new artwork/archive identity in the branding metadata. ([#20])
-- The installed package exposes version 1.0.2 without a prerelease suffix.
-  Numeric requests, including exact 1.0.2, work without prerelease opt-in.
-  CMake and Windows fixed metadata use 1.0.2; DLL prerelease flags are clear.
+- The installed package exposes version 1.0.3 without a prerelease suffix.
+  Numeric requests, including exact 1.0.3, work without prerelease opt-in.
+  CMake and Windows fixed metadata use 1.0.3; DLL prerelease flags are clear.
   Static/shared consumers retain their matching MSVC runtime configuration.
 - Distribution remains GPL-3.0-only. Original MinHook/HDE BSD notices and the
   separately authorized SAFE-FREEZE notice remain intact; these are not three
@@ -83,17 +91,25 @@ by their resulting behavior and links the implementing pull requests.
 
 ### Validation and release boundary
 
+- Extend shared live-call stress to both x64 and Win32, 250 independent processes
+  per architecture, requiring successful first teardown with joined callers,
+  exact source restoration, zero bad results and zero residual handles.
+- Add exact undefined-trap and whole-page-predicate negative controls, genuine
+  Windows event/peer cases, and complete occupied-slot lifecycle checks.
+- Publication is paused by the owner. This prepared version creates no tag,
+  release or draft; an explicit publish instruction is required.
+
 Exact revisions, configurations and completed runs are recorded in
 [Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
-current PR [#20]. Earlier results keep their original source identities.
+combined PR [#22]. Earlier results keep their original source identities.
 Library publication is owner-controlled after the selected source's correctness,
 package, performance and source/license review. Citrine integration and actual
 application/game lifecycle acceptance are the following engineering phase.
 
 ## Development history before the first release
 
-The earlier 0.1.0, 1.0.0-rc.1 and prepared 1.0.1 identifiers represented
-development work; no 1.0.1 tag/release was published. They are not listed as
+The earlier 0.1.0, 1.0.0-rc.1 and prepared 1.0.1/1.0.2 identifiers represented
+development work; neither 1.0.1 nor 1.0.2 was published. They are not listed as
 prior stable releases. The initial independent core, branding, thread/batch
 review, generated unwind support and evidence audit were developed in PRs
 [#1], [#2], [#3], [#4] and [#5]. Benchmark/package infrastructure was merged in
@@ -115,3 +131,6 @@ Report-only review PRs are not counted as additional software releases.
 [#18]: https://github.com/raleonys/mithrilhook/pull/18
 [#19]: https://github.com/raleonys/mithrilhook/pull/19
 [#20]: https://github.com/raleonys/mithrilhook/pull/20
+
+[#21]: https://github.com/raleonys/mithrilhook/pull/21
+[#22]: https://github.com/raleonys/mithrilhook/pull/22

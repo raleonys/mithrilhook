@@ -56,5 +56,6 @@ BOOL   MthInternal_FreeBuffer(LPVOID pBuffer);
 BOOL   MthInternal_RegisterBufferUnwind(LPVOID pBuffer);
 BOOL   MthInternal_RetryBufferUnwind(VOID);
 BOOL   MthInternal_HasPendingBufferUnwind(VOID);
+/* True for every byte of an allocated slot, excluding free slots/header. */
 BOOL   MthInternal_IsBufferAddress(ULONG_PTR address);
 BOOL   MthInternal_IsExecutableAddress(LPVOID pAddress);

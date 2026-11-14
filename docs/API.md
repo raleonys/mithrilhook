@@ -39,7 +39,7 @@ A copied SYSCALL returns MTH_ERROR_UNSUPPORTED_FUNCTION before publication:
 the architectural next-RIP value exposed in RCX would otherwise refer to the
 trampoline. No kernel-transition or exception-return translation is provided.
 Copied SYSRET, SYSENTER, SYSEXIT and RSM, software interrupt/trap forms
-(INT/INT3/INTO/ICEBP), IRET, far CALL/JMP and far RET are explicitly refused as
+(INT/INT3/INTO/ICEBP), deliberate undefined traps (UD0/UD1/UD2), IRET, far CALL/JMP and far RET are explicitly refused as
 separate unsupported classes. Privileged and architecture-inapplicable cases
 are never executed by the acceptance tests. Ordinary near CALL/RET keep their
 existing contract. This finite policy is not a general privileged-ISA decoder.
