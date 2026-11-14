@@ -2,7 +2,7 @@
 
 ## Review status
 
-This review does not change the runtime engine. It records a repeated genuine
+This review corrects the retirement ownership predicate after a repeated genuine
 Windows failure against `c60123e4c15c9be982e3b9238cef220a298d140b`, the merge
 commit of PR #20, and extends the existing diagnostic to the x64 shared build.
 The x64 result is required before assigning the Win32 observation to the
@@ -82,3 +82,38 @@ Acceptance requires repeated independent-process runs on both shared
 architectures with every caller joined, exact source restoration, successful
 first teardown, zero bad call results and zero residual handles. A retry-only
 success, unrelated process failure or reduced stress count is not sufficient.
+
+## Root cause and correction
+
+Two bounded diagnostic builds retained the original refusal policy and recorded
+only fixed fields during peer suspension; output occurred after that scan.
+[Run 43555405469](https://github.com/raleonys/mithrilhook/actions/runs/43555405469),
+commit `9b2aca2f1cfe28bb4d824e6f2fd7b6983719fc56`, recorded a stack-word match
+`0x01010100` during `ACTION_RETIRE`, not an OS release or protection failure.
+[Run 43555674087](https://github.com/raleonys/mithrilhook/actions/runs/43555674087),
+commit `52b6a5c`, additionally recorded the sole occupied trampoline at
+`0x01010FE0`. The rejected value belongs to unused slot 8 in the same
+`0x01010000` block; the published entry occupies slot 127. Immediate Win32 error
+was zero. Earlier `ERROR_ACCESS_DENIED` alone did not identify the cause.
+
+`MthInternal_IsBufferAddress` previously treated every byte of a 4096-byte block
+as a published trampoline, including allocator bookkeeping and free slots. A
+small per-block allocation bitmap now identifies occupied slots independently
+of code bytes and free-list contents. Every byte of a live code/metadata slot
+still blocks retirement when observed in any scanned register or stack word.
+Free slots and the allocator header do not. Failed final release preserves the
+bit and allocation; a later successful release clears ownership. Double free
+is refused without corrupting the map. No scan, peer-coverage check, read-failure
+refusal or cleanup ownership barrier is disabled. No success retry was added.
+
+The temporary trace and diagnosis-only job are removed from the corrected tree.
+Deterministic projected-peer checks cover the unused/header reproducer, every
+byte of a live slot in registers and stack, allocation across block boundaries,
+release failure/retry, double-free refusal and full ownership retirement. An
+exact control restores only the old whole-block predicate and must exit 1 at
+`unused slot and header values do not block whole-engine retirement`. A genuine
+Windows peer separately proves first-call cleanup with an unused-slot register
+value and allocator-header stack word, while the existing live-pointer checks
+continue to refuse retirement. Both shared architectures retain the unchanged
+100-independent-process live-call stress gate. Corrected native results are
+pending validation.

@@ -24,6 +24,36 @@ namespace {
 unsigned checks;
 void require(bool value,const char* why){++checks;if(!value)throw std::runtime_error(why);}
 DWORD WINAPI worker(void*){return 0;}
+void unused_slot_control(){
+    require(MTH_Initialize()==MTH_OK,"initialize real unused-slot control");
+    auto* target=static_cast<unsigned char*>(VirtualAlloc(nullptr,128,MEM_COMMIT|MEM_RESERVE,PAGE_EXECUTE_READWRITE));
+    require(target!=nullptr,"allocate real unused-slot target");
+    std::memset(target,0x90,128);target[16]=target[64]=0xc3;
+    void* original=nullptr;
+    require(MTH_CreateHook(target,target+64,&original)==MTH_OK&&original,"create one actual occupied slot");
+    const auto base=reinterpret_cast<std::uintptr_t>(original)&~std::uintptr_t(0xfff);
+    const auto slotSize=sizeof(void*)==8?256u:32u;
+    const auto unused=base+slotSize;
+    require(unused+slotSize<=reinterpret_cast<std::uintptr_t>(original),"selected first slot precedes the sole occupied last slot");
+    const HANDLE peer=CreateThread(nullptr,0,worker,nullptr,CREATE_SUSPENDED,nullptr);
+    require(peer!=nullptr,"create unused-slot real peer");
+    CONTEXT saved{};saved.ContextFlags=CONTEXT_FULL;
+    require(GetThreadContext(peer,&saved)!=FALSE,"save unused-slot peer context");
+    auto edited=saved;PEER_REGISTER(edited)=unused;
+    require(SetThreadContext(peer,&edited)!=FALSE,"place unused-slot value in a real register");
+    std::uintptr_t backup=0,value=base;SIZE_T copied=0;
+    auto* word=reinterpret_cast<void*>(PEER_SP(saved));
+    require(ReadProcessMemory(GetCurrentProcess(),word,&backup,sizeof backup,&copied)!=FALSE&&copied==sizeof backup,"save unused-slot peer stack word");
+    require(WriteProcessMemory(GetCurrentProcess(),word,&value,sizeof value,&copied)!=FALSE&&copied==sizeof value,"place allocator-header value on real stack");
+    const auto status=MTH_Uninitialize();
+    require(WriteProcessMemory(GetCurrentProcess(),word,&backup,sizeof backup,&copied)!=FALSE&&copied==sizeof backup,"restore unused-slot peer stack word");
+    require(SetThreadContext(peer,&saved)!=FALSE,"restore unused-slot peer context");
+    require(ResumeThread(peer)==1,"repay exactly the external unused-slot suspension");
+    require(WaitForSingleObject(peer,10000)==WAIT_OBJECT_0&&CloseHandle(peer)!=FALSE,"join and close unused-slot peer");
+    if(status!=MTH_OK)require(MTH_Uninitialize()==MTH_OK,"clean up refused unused-slot control after peer drain");
+    require(VirtualFree(target,0,MEM_RELEASE)!=FALSE,"release unused-slot source fixture");
+    require(status==MTH_OK,"real unused-slot/header values permit first-call whole-engine retirement");
+}
 void still_owned(void* original){
     MEMORY_BASIC_INFORMATION region{};
     require(VirtualQuery(original,&region,sizeof region)!=0 && region.State==MEM_COMMIT,
@@ -32,6 +62,7 @@ void still_owned(void* original){
 }
 int main(){
     try{
+        unused_slot_control();
         require(MTH_Initialize()==MTH_OK,"initialize actual retirement engine");
         auto* target=static_cast<unsigned char*>(VirtualAlloc(nullptr,128,MEM_COMMIT|MEM_RESERVE,PAGE_EXECUTE_READWRITE));
         require(target!=nullptr,"allocate retirement target");

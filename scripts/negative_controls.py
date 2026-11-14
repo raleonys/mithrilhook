@@ -44,6 +44,7 @@ TRANSITION_GUARD='''            if ((hs.opcode == 0x0F && (hs.opcode2 == 0x05 ||
 TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before original publication',
  'x87':'FAIL: x87 producer refuses before original publication',
  'transition':'FAIL: transition instruction refuses before original publication'}
+BUFFER_ORACLE='FAIL: unused slot and header values do not block whole-engine retirement'
 def prepare(output):
  output=Path(output).resolve()
  if not output.is_relative_to((ROOT/'build').resolve()):
@@ -53,6 +54,14 @@ def prepare(output):
  if hashlib.sha256((ROOT/'src/hook.c').read_bytes()).hexdigest()!=expected:
   raise ValueError('Control source does not match the reviewed inventory')
  output.mkdir(parents=True,exist_ok=True)
+ buffer=(ROOT/'src/buffer.c').read_text()
+ expected_buffer=json.loads((ROOT/'metadata/SOURCE_MANIFEST.json').read_text())['files']['src/buffer.c']
+ if hashlib.sha256((ROOT/'src/buffer.c').read_bytes()).hexdigest()!=expected_buffer:
+  raise ValueError('Buffer control source does not match the reviewed inventory')
+ anchor='UINT index = (UINT)((address - (ULONG_PTR)block) / MEMORY_SLOT_SIZE);'
+ if buffer.count(anchor)!=1:raise ValueError('Missing unique live-slot address predicate')
+ (output/'unused-slot-buffer.c').write_text(buffer.replace(anchor,'return TRUE; /* restore the old whole-block predicate */\n            '+anchor,1))
+
  for mode,(signature,_) in CASES.items():
   if source.count(signature)!=1:raise ValueError('Ambiguous entry signature: '+mode)
   start=source.index(signature);end=source.index('\n}',start)
@@ -91,7 +100,7 @@ def run(mode,command):
   if result.returncode!=42 or failures or 'SINGLE_DISABLE_IP_MISMATCH: real IP retained the trampoline/relay address' not in lines or 'REAL_PEER_CLEANUP: PASS original context restored, worker joined, handle count restored' not in lines:
    raise RuntimeError('Stale-action control did not prove the precise mismatch and complete cleanup')
   print('PASS: exact negative control stale, complete cleanup');return
- expected=TRAMPOLINE_CONTROLS[mode] if mode in TRAMPOLINE_CONTROLS else EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
+ expected=BUFFER_ORACLE if mode=='unused-slot' else TRAMPOLINE_CONTROLS[mode] if mode in TRAMPOLINE_CONTROLS else EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
  if result.returncode!=1 or failures!=[expected]:
   raise RuntimeError('Control did not fail only at its required assertion: '+mode)
  print('PASS: exact negative control '+mode)
@@ -99,7 +108,7 @@ def main():
  parser=argparse.ArgumentParser(description=__doc__)
  sub=parser.add_subparsers(dest='operation',required=True)
  p=sub.add_parser('prepare');p.add_argument('--output',required=True)
- p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,*TRAMPOLINE_CONTROLS,"stale"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
+ p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,*TRAMPOLINE_CONTROLS,"stale","unused-slot"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
  args=parser.parse_args()
  if args.operation=='prepare':prepare(args.output)
  else:

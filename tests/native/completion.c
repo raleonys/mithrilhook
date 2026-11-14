@@ -117,7 +117,10 @@ static BOOL WINAPI destroy(HANDLE h) {
 #define VirtualFree release
 #define HeapDestroy destroy
 #define ReadProcessMemory read_stack
-#include "buffer.c"
+#ifndef MTH_TEST_BUFFER_SOURCE
+#define MTH_TEST_BUFFER_SOURCE "buffer.c"
+#endif
+#include MTH_TEST_BUFFER_SOURCE
 #ifndef MTH_TEST_ENGINE_SOURCE
 #define MTH_TEST_ENGINE_SOURCE "hook.c"
 #endif
@@ -283,6 +286,58 @@ static void patch_above_pages(void) {
     require(VirtualQuery(target+4096,&region,sizeof region) && region.Protect==PAGE_EXECUTE_READWRITE,"hotpatch preserves second-page protection");
     require(MTH_DisableHook(target+4097)==MTH_OK && target[4092]==0x90 && target[4097]==0xc3,"disable restores hotpatch bytes");finish();
 }
+static void unused_slot_retirement(void) {
+    LPVOID original;PMEMORY_BLOCK block;PMEMORY_SLOT unused;unsigned i;
+    setup();original=create_at(0);block=g_pMemoryBlocks;unused=block->pFree;
+    require(unused!=NULL && (LPVOID)unused!=original,"fixture has distinct occupied and unused slots in one block");
+    /* A value in an unused slot/header is not an admitted original pointer.
+     * Preserve conservative scanning of the complete occupied slot instead. */
+    peer_register=(DWORD_PTR)(ULONG_PTR)unused;
+    peer_stack[0]=(DWORD_PTR)(ULONG_PTR)block;
+    peer_stack[1]=(DWORD_PTR)(ULONG_PTR)((BYTE*)unused+MEMORY_SLOT_SIZE-1);
+    require(MTH_Uninitialize()==MTH_OK,"unused slot and header values do not block whole-engine retirement");
+    require(g_hHeap==NULL && g_pMemoryBlocks==NULL,"unused-slot retirement completes on its first call");
+    require(VirtualFree(target,0,MEM_RELEASE),"release unused-slot fixture target");target=NULL;
+
+    setup();original=create_at(0);block=g_pMemoryBlocks;
+    for(i=0;i<MEMORY_SLOT_SIZE;++i) {
+        peer_register=(DWORD_PTR)(ULONG_PTR)((BYTE*)original+i);
+        require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"every occupied slot byte in a register blocks retirement");
+        peer_register=0;peer_stack[0]=(DWORD_PTR)(ULONG_PTR)((BYTE*)original+i);
+        require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"every occupied slot byte on a stack blocks retirement");
+        peer_stack[0]=0;
+        require(g_hHeap!=NULL && g_pMemoryBlocks==block && !HasRetainedThreadOwnership(),"busy slot preserves allocation and repays peer suspensions");
+    }
+    finish();
+}
+
+static void slot_ownership_lifecycle(void) {
+    LPVOID slots[MEMORY_BLOCK_SLOTS];PMEMORY_BLOCK block;unsigned i,j;
+    setup();
+    for(i=0;i<MEMORY_BLOCK_SLOTS;++i) {
+        slots[i]=MthInternal_AllocateBuffer(target);
+        require(slots[i]!=NULL,"allocate ownership slots across a block boundary");
+        for(j=0;j<MEMORY_SLOT_SIZE;++j)
+            require(MthInternal_IsBufferAddress((ULONG_PTR)slots[i]+j),"each allocated slot byte is owned");
+    }
+    for(block=g_pMemoryBlocks;block;block=block->pNext)
+        for(j=0;j<MEMORY_SLOT_SIZE;++j)
+            require(!MthInternal_IsBufferAddress((ULONG_PTR)block+j),"allocator header bytes are not published slots");
+    /* A failed final release must keep its allocation bit and remain retryable. */
+    fail_free=TRUE;
+    require(!MthInternal_FreeBuffer(slots[MEMORY_BLOCK_SLOTS-1]),"last-slot release failure preserves ownership");
+    require(MthInternal_IsBufferAddress((ULONG_PTR)slots[MEMORY_BLOCK_SLOTS-1]),"failed release remains visible to retirement");
+    fail_free=FALSE;
+    for(i=0;i<MEMORY_BLOCK_SLOTS;++i) {
+        ULONG_PTR address=(ULONG_PTR)slots[i];
+        require(MthInternal_FreeBuffer(slots[i]),"retire an allocated ownership slot");
+        for(j=0;j<MEMORY_SLOT_SIZE;++j)
+            require(!MthInternal_IsBufferAddress(address+j),"released slot bytes no longer count as published entries");
+        require(!MthInternal_FreeBuffer((LPVOID)address),"double free cannot corrupt the live ownership map");
+    }
+    require(g_pMemoryBlocks==NULL,"all ownership blocks retire completely");finish();
+}
+
 static void partial_block_retirement(void) {
     HANDLE owner;unsigned i;setup();
     for(i=0;i<MEMORY_BLOCK_SIZE/MEMORY_SLOT_SIZE+6;++i)create_at(i*32);
@@ -304,7 +359,8 @@ int main(int argc,char** argv) {
     if(!strcmp(mode,"all")||!strcmp(mode,"unpublished"))unpublished_failure();
     if(!strcmp(mode,"partial-disable"))partial_disable(FALSE);
     if(!strcmp(mode,"late-peer"))late_birth(FALSE);
-    if(!strcmp(mode,"all")){partial_batch();partial_disable(FALSE);partial_disable(TRUE);single_disable_refusal();repair_failure(FALSE);repair_failure(TRUE);late_birth(FALSE);late_birth(TRUE);partial_preparation();stack_failures();patch_above_pages();partial_block_retirement();}
+    if(!strcmp(mode,"unused-slot"))unused_slot_retirement();
+    if(!strcmp(mode,"all")){partial_batch();partial_disable(FALSE);partial_disable(TRUE);single_disable_refusal();repair_failure(FALSE);repair_failure(TRUE);late_birth(FALSE);late_birth(TRUE);partial_preparation();stack_failures();patch_above_pages();partial_block_retirement();unused_slot_retirement();slot_ownership_lifecycle();}
     require(checks!=0,"known completion test mode required");
     printf("PASS: %u completion, control-flow, retirement and page checks (projected peers)\n",checks);
     return 0;

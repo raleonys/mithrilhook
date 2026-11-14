@@ -139,3 +139,10 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   add_test(NAME mithrilhook_target_compatibility_comparison COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/report_target_compatibility.py $<TARGET_FILE:mithrilhook_target_probe> $<TARGET_FILE:mithrilhook_target_probe_unwind_control>)
   set_tests_properties(mithrilhook_target_compatibility_comparison PROPERTIES TIMEOUT 90)
 endif()
+
+add_executable(mithrilhook_control_unused_slot native/completion.c
+  ${PROJECT_SOURCE_DIR}/src/trampoline.c ${PROJECT_SOURCE_DIR}/${MTH_HDE})
+target_include_directories(mithrilhook_control_unused_slot PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(mithrilhook_control_unused_slot PRIVATE MTH_TEST_BUFFER_SOURCE="${CMAKE_CURRENT_BINARY_DIR}/controls/unused-slot-buffer.c" _WIN32_WINNT=0x0601)
+add_test(NAME mithrilhook_control_unused_slot COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py run --mode unused-slot -- $<TARGET_FILE:mithrilhook_control_unused_slot> unused-slot)
+set_tests_properties(mithrilhook_control_unused_slot PROPERTIES TIMEOUT 45)
