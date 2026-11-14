@@ -68,7 +68,7 @@
     "src/hde/pstdint.h": "4bffb311ef87d0d86569240a10f56eca826ebfe46233710f9dde97d42b3cb474",
     "src/hde/table32.h": "b65c46094b4a1c4e8e7b02eb3241b714b3a0268151b5b332e3f5e7c98ebd2c38",
     "src/hde/table64.h": "57d2d598a594a12cb7e975c01892bc4918c7b8107f7a55d5379a9825a465d956",
-    "src/hook.c": "bf6a5651a8646b4560cf2f9a3b868131963e51bd5edfee4abddcc29096cb76ee",
+    "src/hook.c": "e9c9861b1fd167aff3e66043f6650e79f216f822c8f02253a00b1490c4017321",
     "src/trampoline.c": "87e9890ee206940a784f39df96cf8f2ed0ec870e95c2882ad0483fb3e2dbf3be",
     "src/trampoline.h": "bc436e798fb05616a3b72e3992212434dce213694fa6f8b19090043a1c35ddff",
     "tests/CMakeLists.txt": "f22ec88a75650ddb76e1a24f53baee318be1dbef0644edf1e0d87de2f7a83ede",

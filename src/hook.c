@@ -46,15 +46,15 @@
 
 
 /* Temporary bounded diagnosis: fixed storage only during peer suspension. */
-static struct { ULONG_PTR stage, action, peer, peers, line, error, ip, sp, match, aux; } mthTrace;
+static struct { ULONG_PTR stage, action, peer, peers, line, error, ip, sp, match, aux, slot; } mthTrace;
 #define MTH_TRACE_FAIL(at, extra) do { if (!mthTrace.line) { mthTrace.line=__LINE__; mthTrace.error=GetLastError(); mthTrace.match=(ULONG_PTR)(at); mthTrace.aux=(ULONG_PTR)(extra); } } while(0)
 static void MthDumpTrace(void)
 {
-    static const char *keys[]={"stage","action","peer","peers","line","error","ip","sp","match","aux"};
-    ULONG_PTR values[]={mthTrace.stage,mthTrace.action,mthTrace.peer,mthTrace.peers,mthTrace.line,mthTrace.error,mthTrace.ip,mthTrace.sp,mthTrace.match,mthTrace.aux};
+    static const char *keys[]={"stage","action","peer","peers","line","error","ip","sp","match","aux","slot"};
+    ULONG_PTR values[]={mthTrace.stage,mthTrace.action,mthTrace.peer,mthTrace.peers,mthTrace.line,mthTrace.error,mthTrace.ip,mthTrace.sp,mthTrace.match,mthTrace.aux,mthTrace.slot};
     char text[512]; const char *prefix="RETIRE_TRACE"; unsigned n=0,i,j; DWORD written;
     while(*prefix)text[n++]=*prefix++;
-    for(i=0;i<10;++i) { const char *key=keys[i];text[n++]=' ';while(*key)text[n++]=*key++;text[n++]='=';text[n++]='0';text[n++]='x';
+    for(i=0;i<11;++i) { const char *key=keys[i];text[n++]=' ';while(*key)text[n++]=*key++;text[n++]='=';text[n++]='0';text[n++]='x';
         for(j=0;j<sizeof(ULONG_PTR)*2;++j)text[n++]="0123456789abcdef"[(values[i]>>((sizeof(ULONG_PTR)*2-1-j)*4))&15]; }
     text[n++]='\n';WriteFile(GetStdHandle(STD_ERROR_HANDLE),text,n,&written,NULL);
 }
@@ -1173,6 +1173,7 @@ MTH_STATUS WINAPI MTH_Uninitialize(VOID)
     if (!EnterSpinLock())
         return MTH_ERROR_REENTRANT_CALL;
     memset(&mthTrace,0,sizeof(mthTrace));mthTrace.stage=1;
+    mthTrace.slot=g_hooks.size?(ULONG_PTR)g_hooks.pItems[0].pTrampoline:0;
     if (g_hHeap != NULL)
     {
         status = RetryRetainedThreadOwnership() ? MTH_OK : MTH_ERROR_MEMORY_PROTECT;
