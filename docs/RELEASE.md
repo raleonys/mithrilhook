@@ -10,7 +10,7 @@ owner explicitly says to publish. No tag, draft or release is created by this wo
 
 The library includes the independent thirteen-export MTH API, strict ownership
 core, bounded generated unwind support and reviewed corrections through the
-undefined-trap and occupied-slot retirement corrections in PRs #21 and #22. The [changelog](../CHANGELOG.md) groups
+undefined-trap, occupied-slot and unaligned-stack retirement corrections through PR #23. The [changelog](../CHANGELOG.md) groups
 current behavior and links implementation PRs. The earlier 0.1.0,
 1.0.0-rc.1 and unpublished 1.0.1/1.0.2 development identifiers are not listed as prior stable releases.
 

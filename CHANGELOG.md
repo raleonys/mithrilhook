@@ -26,6 +26,10 @@ by their resulting behavior and links the implementing pull requests.
 
 ### Fixed
 
+- Inspect every complete pointer-width window in peer stack bytes, including
+  unaligned owners and values spanning read/region boundaries. Preserve occupied
+  slot ownership on refusal and retain read/protection/budget failure checks. ([#23])
+
 - Refuse copied UD0/UD1/UD2 before their deliberate invalid-opcode exception
   address can move to a trampoline. Keep trap bodies after the copied prefix
   at their source addresses and validate exact Windows exception events. ([#21])
@@ -134,3 +138,5 @@ Report-only review PRs are not counted as additional software releases.
 
 [#21]: https://github.com/raleonys/mithrilhook/pull/21
 [#22]: https://github.com/raleonys/mithrilhook/pull/22
+
+[#23]: https://github.com/raleonys/mithrilhook/pull/23

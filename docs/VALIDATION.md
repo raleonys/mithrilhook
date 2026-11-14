@@ -4,7 +4,7 @@
 
 The prepared distribution version is 1.0.3, with no prerelease suffix. The source
 combines PR #21's copied undefined-trap refusal and PR #22's live-slot ownership
-correction on the merged PR #20 baseline. Publication remains paused until the
+correction on the merged PR #20 baseline, plus PR #23's byte-window stack scan. Publication remains paused until the
 owner explicitly says to publish. Completed results below identify measured
 sources; changing metadata does not transfer earlier evidence to new bytes.
 
@@ -49,8 +49,8 @@ controls remain in the full matrix.
 
 ## Added 1.0.3 acceptance
 
-The matrix registers 39 tests per x64 cell and 32 per Win32 cell: 252 engine
-executions and seven installed consumers, 259 native total, plus two portable
+The matrix registers 41 tests per x64 cell and 34 per Win32 cell: 266 engine
+executions and seven installed consumers, 273 native total, plus two portable
 tests. UD0/UD1/UD2 coverage adds 61,560 structural layouts (every ModR/M byte,
 five copied offsets, eight legacy-prefix choices and sixteen single REX
 prefixes), exact Windows source exception-address observations, source-resident
@@ -83,6 +83,23 @@ two combined-source runs total 1,000 independent processes, 20,000 sessions,
 800,000 transitions and 809,933,121 actual calls, with zero bad results or
 residual handles. These results belong to their recorded commits, not
 subsequent documentation bytes.
+
+## PR #23 stack-owner acceptance
+
+The new production-linked fixture keeps a real Windows peer externally
+suspended, saves its exact stack/context, places the actual published original
+at every alignment and across two read boundaries, and requires both removal and
+whole-engine shutdown to refuse while storage stays committed. Edited stack
+bytes are restored before the peer resumes; the worker drains with its padding
+intact, then retirement succeeds and the handle baseline restores.
+
+Projected cases additionally cover short first regions, odd region boundaries,
+unaligned captured stack pointers, all live-slot boundary values, incomplete final
+windows and read/query/protection/budget failures. The exact negative control
+restores only pointer-width stepping and must exit 1 at its first unaligned-owner
+refusal assertion. Existing aligned, unused/header, cross-block and release-retry
+cases remain enabled. Current corrected-source native and performance results
+are pending; earlier completed evidence above does not validate the new bytes.
 
 ## Completed predecessor evidence
 

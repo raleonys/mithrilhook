@@ -2,7 +2,7 @@
 
 ## Review status
 
-This is a report-only review. It does not change the runtime engine. The
+This review corrects the retirement scan with alignment-safe byte windows. The
 finding was reproduced against `a05b879766b4c6a2f2c4f0b6e0d79667ce9a4f8f`,
 the merge commit of PR #22 and current `master` at the time of review.
 
@@ -100,3 +100,33 @@ An exact negative control should restore pointer-width stepping and fail at the
 first unaligned-owner refusal assertion. A test that merely stores an aligned
 pointer, leaves it in a register, crashes after premature release or accepts a
 retry-only teardown success does not demonstrate this correction.
+
+## Correction and regression coverage
+
+The scan now advances one byte for each complete pointer-width candidate, using
+`memcpy` into a properly aligned scalar. A fixed local buffer retains the final
+`sizeof(DWORD_PTR)-1` bytes across reads and adjacent readable regions in the same
+stack allocation. Only newly read bytes consume the existing 64 MiB budget.
+Partial final windows are not padded with bytes outside the allocation. Failed
+or short reads, query failure, guard/no-access/uncommitted regions and budget
+exhaustion still reject retirement. The occupied-slot predicate is unchanged.
+
+The deterministic completion fixture now exercises all alignments, both read
+boundaries, pointers into both ends of live slots, short first regions, odd
+region boundaries, unaligned captured SP and incomplete trailing windows. It
+requires both removal and shutdown refusal with exact hook/heap/block ownership,
+source bytes and suspension accounting retained. Independent cases preserve
+read/query/protection/budget failure refusal. Restoring only pointer-width
+stepping must fail at `unaligned stack owner blocks removal before release`.
+
+A new production-linked native x64/Win32 fixture uses an actual worker with
+committed stack padding. It externally suspends that worker, saves context and
+stack bytes, places the real published pointer at every alignment and across two
+read boundaries, requires both refusals, restores the exact bytes, then resumes
+and joins the worker before successful retirement. No target or original is
+executed. Genuine Windows results remain pending; portable decoder/relocator
+sanitizers pass but do not execute this retirement path.
+
+VERSION remains the unpublished owner-selected 1.0.3. Earlier prepared archives
+predate this correction and must not be treated as corrected packages. No tag,
+draft or release is created by this work.

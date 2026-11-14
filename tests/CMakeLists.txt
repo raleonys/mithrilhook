@@ -32,6 +32,7 @@ set_tests_properties(mithrilhook_completion_contracts PROPERTIES TIMEOUT 45)
 mth_linked(mithrilhook_real_peer_contracts native/real_peer.cpp)
 mth_linked(mithrilhook_live_call_contracts native/live_calls.c)
 mth_linked(mithrilhook_retirement_contracts native/retirement_peer.cpp)
+mth_linked(mithrilhook_unaligned_stack_contracts native/unaligned_stack.c)
 mth_linked(mithrilhook_prefixed_branch_contracts native/prefixed_branches.c)
 mth_linked(mithrilhook_internal_branch_contracts native/internal_branches.c)
 mth_linked(mithrilhook_internal_call_contracts native/internal_calls.c)
@@ -154,3 +155,10 @@ target_include_directories(mithrilhook_control_undefined_trap PRIVATE ${PROJECT_
 target_compile_definitions(mithrilhook_control_undefined_trap PRIVATE _WIN32_WINNT=0x0601)
 add_test(NAME mithrilhook_control_undefined_trap COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py run --mode undefined-trap -- $<TARGET_FILE:mithrilhook_control_undefined_trap>)
 set_tests_properties(mithrilhook_control_undefined_trap PROPERTIES TIMEOUT 45)
+
+add_executable(mithrilhook_control_unaligned_stack native/completion.c
+  ${PROJECT_SOURCE_DIR}/src/trampoline.c ${PROJECT_SOURCE_DIR}/${MTH_HDE})
+target_include_directories(mithrilhook_control_unaligned_stack PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(mithrilhook_control_unaligned_stack PRIVATE MTH_TEST_ENGINE_SOURCE="${CMAKE_CURRENT_BINARY_DIR}/controls/unaligned-stack.c" _WIN32_WINNT=0x0601)
+add_test(NAME mithrilhook_control_unaligned_stack COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py run --mode unaligned-stack -- $<TARGET_FILE:mithrilhook_control_unaligned_stack> unaligned-stack)
+set_tests_properties(mithrilhook_control_unaligned_stack PROPERTIES TIMEOUT 45)

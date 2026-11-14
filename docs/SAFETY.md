@@ -62,7 +62,10 @@ an unrecoverable failure.
    is not repaired. See UNWIND.md for the exact subset and lifecycle.
 6. Stack/register scans cover every byte of allocated code/metadata slots,
    excluding free slots and allocator bookkeeping. Stale values that match an
-   occupied slot can still conservatively defer cleanup. The scan budget is bounded; incomplete reads reject retirement.
+   occupied slot can still conservatively defer cleanup. Stack storage is scanned
+   at every byte offset using complete pointer-width windows, with overlap across
+   reads and adjacent readable regions of the same allocation. The scan budget
+   remains 64 MiB; short/failed reads and inaccessible regions reject retirement.
 7. Actual arbitrary host/game unload acceptance remains independent of controlled
    peer and leaf-call tests. DLL module leases and application quiescence remain
    the consumer's responsibility.

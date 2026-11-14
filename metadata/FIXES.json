@@ -160,6 +160,11 @@
       "id": "F32",
       "change": "Track allocated slots across publication and failed/successful release; whole-engine retirement ignores unused slots/header while preserving all occupied code/metadata byte checks",
       "origin": "MithrilHook review #22; actual Win32 stack word 0x01010100 falsely matched an unused slot beside the sole live trampoline at 0x01010FE0"
+    },
+    {
+      "id": "F33",
+      "change": "Inspect every complete pointer window with alignment-safe loads and carried overlap across stack reads/readable regions; retain live-slot and incomplete-scan refusal boundaries",
+      "origin": "MithrilHook review #23; pointer-width stack stepping misses packed/unaligned original-call owners"
     }
   ],
   "excluded_unreviewed_proposals": {

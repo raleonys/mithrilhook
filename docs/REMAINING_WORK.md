@@ -2,7 +2,8 @@
 
 The prepared source version is 1.0.3, without an RC suffix. It includes the
 merged corrections through PR #20 plus PR #21's copied undefined-trap refusal
-and PR #22's exact occupied-slot retirement checks. Earlier 1.0.1 and 1.0.2
+and PR #22's exact occupied-slot retirement checks, plus PR #23's byte-window
+stack-owner scan. Earlier 1.0.1 and 1.0.2
 preparations were not published. Tag/release publication is paused until the
 owner explicitly says to publish. Validation, review and package preparation
 may continue during that hold. Citrine integration remains a later task.
