@@ -105,7 +105,7 @@ int main(void)
             {
                 unsigned index;
                 fprintf(stderr,"LIVE_CALLS_TEARDOWN session=%u status=%s status_value=%d win32_error=%lu target_called=%u target_result=%d bytes_restored=%u\n",
-                    session,MTH_StatusToString(shutdown),(int)shutdown,shutdownError,
+                    session,MTH_StatusToString(shutdown),(int)shutdown,(unsigned long)shutdownError,
                     (unsigned)(shutdown==MTH_OK),result,(unsigned)restored);
                 fprintf(stderr,"LIVE_CALLS_SOURCE expected=");
                 for(index=0;index<sizeof bytes;++index)fprintf(stderr,"%02x",bytes[index]);

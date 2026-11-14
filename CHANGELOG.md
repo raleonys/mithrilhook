@@ -3,6 +3,14 @@
 VERSION is the canonical distribution version. This history groups changes
 by their resulting behavior and links the implementing pull requests.
 
+## Unreleased
+
+- Use pointer-width arithmetic for the patch page offset before adding it to
+  the page base. Preserve the existing one-or-two-page completion bound.
+- Convert DWORD diagnostics explicitly to unsigned long for their existing
+  `%lu` fields, retaining native Windows output and matching portable analysis
+  types without changing the JSON schema or teardown diagnostic fields.
+
 ## [1.0.4] — 2026-11-14
 
 ### Added

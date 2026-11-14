@@ -1021,7 +1021,7 @@ static MTH_STATUS EnableHookLL(UINT pos, BOOL enable)
     for (i = 0; i < g_patchCompletion.count; ++i)
     {
         PATCH_PAGE *page = &g_patchCompletion.pages[i];
-        page->address = (LPVOID)(first + i * info.dwPageSize);
+        page->address = (LPVOID)(first + (ULONG_PTR)i * info.dwPageSize);
         if (!VirtualProtect(page->address, info.dwPageSize, PAGE_EXECUTE_READWRITE, &page->protection))
         {
             (void)RetryPatchCompletion();
