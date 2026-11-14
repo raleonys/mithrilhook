@@ -1,13 +1,15 @@
 # Release and integration status
 
-**Library version: 1.0.4.** The official release incorporates all reviewed
+**Library version: 1.0.5.** PR #25 prepares the next stable patch release with
+explicit page-offset and diagnostic types. The owner plans publication after
+integration and fresh exact-source validation. The published 1.0.4 release incorporates all reviewed
 corrections through PR #23: strict ownership, peer/batch repair, bounded generated
 unwind, relocation refusals, occupied-slot tracking and complete byte-window
 stack scanning. The owner authorized tag/release publication after the final
 source/package/evidence checks. Earlier prepared versions were not published.
 [Release assets](https://github.com/raleonys/mithrilhook/releases/tag/v1.0.4)
-retain the selected source and validation identities. Citrine integration is
-the next independent engineering phase.
+retain the selected source and validation identities. Laureondo currently pins
+the owner-supplied 1.0.4 archive; importing 1.0.5 remains a separate integration step.
 
 ## Library release gates
 
@@ -17,12 +19,12 @@ the next independent engineering phase.
 | Installed package and DLL identity | All seven fresh consumers link/run with matching CRT settings; stable numeric version compatibility and DLL numeric/full/prerelease metadata match VERSION. |
 | Comparative performance | Review the selected source's exact-head five-environment run, raw recipe/checksums, source/binary identities and recomputed results. Earlier #12 measurements remain historical. See [Benchmarks](BENCHMARKS.md). |
 | Release content | Review the changelog, documented support/refusal scope, GPL/BSD provenance and versioned validation artifacts. VERSION and package/resource metadata must agree. |
-| Publication | The authorized v1.0.4 release pins the selected commit, packages, raw evidence and checksums. See [Release and packages](RELEASE.md). |
+| Publication | The planned v1.0.5 release must pin the integrated commit, packages, raw evidence and checksums. The existing v1.0.4 assets remain historical. See [Release and packages](RELEASE.md). |
 
 ## Next engineering phase: Citrine integration
 
-Library publication can precede integration. Citrine still uses its existing
-adapter/vendor input. Integrate the selected immutable MithrilHook package/API,
+Library publication can precede integration. Laureondo retains its accepted
+1.0.4 adapter/vendor input. Integrate the new immutable MithrilHook package/API,
 then validate actual application behavior without transferring hosted fixture
 results into a game-acceptance claim.
 

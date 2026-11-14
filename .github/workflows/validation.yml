@@ -4,10 +4,20 @@ on:
     branches: [master, main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      stress_only:
+        description: Run the focused shared active-caller diagnostic only
+        type: boolean
+        default: false
+      stress_processes:
+        description: Independent processes per architecture for the focused diagnostic
+        type: number
+        default: 1000
 permissions:
   contents: read
 jobs:
   portable:
+    if: github.event_name != 'workflow_dispatch' || !inputs.stress_only
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +29,7 @@ jobs:
           UBSAN_OPTIONS: halt_on_error=1
           ASAN_OPTIONS: detect_leaks=1
   native:
+    if: github.event_name != 'workflow_dispatch' || !inputs.stress_only
     runs-on: windows-2022
     strategy:
       fail-fast: false
@@ -104,3 +115,54 @@ jobs:
             build/package-consumer/package.xml
             build/package-consumer/Testing/Temporary/LastTest.log
             dist/install
+  focused-stress:
+    if: github.event_name == 'workflow_dispatch' && inputs.stress_only
+    runs-on: windows-2022
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, Win32]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/verify_sources.py
+      - run: cmake -S . -B build/focused-stress -A ${{ matrix.arch }} -T v143 -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON
+      - run: cmake --build build/focused-stress --config Release --target mithrilhook_live_call_contracts --parallel 2
+      - name: Retain every independent process result and fail on the first refusal
+        shell: python
+        env:
+          STRESS_PROCESSES: ${{ inputs.stress_processes }}
+        run: |
+          import json,os,subprocess
+          from pathlib import Path
+          count=int(os.environ['STRESS_PROCESSES'])
+          assert 250<=count<=5000
+          executable=Path('build/focused-stress/tests/Release/mithrilhook_live_call_contracts.exe').resolve()
+          records=[]
+          with Path('build/focused-stress/processes.log').open('w',encoding='utf-8') as log:
+              for index in range(count):
+                  result=subprocess.run([str(executable)],capture_output=True,text=True,timeout=45)
+                  log.write(f'RUN {index+1} returncode={result.returncode}\n'+result.stdout+result.stderr)
+                  log.flush()
+                  if result.returncode:
+                      print(f'LIVE_CALL_STRESS_FAILED process={index+1}')
+                      print(result.stdout+result.stderr)
+                      raise SystemExit(result.returncode)
+                  values=[json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
+                  assert len(values)==1 and values[0]['sessions']==20 and values[0]['patch_transitions']==800
+                  assert values[0]['bad_results']==0 and values[0]['residual_handles']==0
+                  records.append(values[0])
+                  if (index+1)%25==0:print(f'LIVE_CALL_STRESS_COMPLETED processes={index+1}',flush=True)
+          Path('build/focused-stress/results.json').write_text(json.dumps(records,indent=2)+'\n')
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MithrilHook-focused-stress-${{ matrix.arch }}
+          path: |
+            build/focused-stress/processes.log
+            build/focused-stress/results.json
+            build/focused-stress/tests/Release/mithrilhook_live_call_contracts.exe
+            build/focused-stress/tests/Release/mithrilhook.dll

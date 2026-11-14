@@ -174,6 +174,6 @@ int main(int argc,char **argv)
  for(unsigned i=0;i<peerCount;++i){require(WaitForSingleObject(peers[i],5000)==WAIT_OBJECT_0,"join idle peer");DWORD code;require(GetExitCodeThread(peers[i],&code)!=0&&code==0,"idle peer completed successfully");require(CloseHandle(peers[i])&&CloseHandle(ready[i]),"retire peer handles");}
  require(CloseHandle(stop)!=0&&VirtualFree(arena,0,MEM_RELEASE)!=0,"retire fixture owners");
  require(GetProcessHandleCount(GetCurrentProcess(),&finalHandles)!=0&&finalHandles==baseline,"restore process handle baseline");
- std::printf("{\"type\":\"complete\",\"cycles\":3,\"hooks\":%u,\"peers\":%u,\"callers\":%u,\"handle_baseline\":%lu,\"handle_final\":%lu,\"errors\":0}\n",count,peerCount,callers,baseline,finalHandles);
+ std::printf("{\"type\":\"complete\",\"cycles\":3,\"hooks\":%u,\"peers\":%u,\"callers\":%u,\"handle_baseline\":%lu,\"handle_final\":%lu,\"errors\":0}\n",count,peerCount,callers,static_cast<unsigned long>(baseline),static_cast<unsigned long>(finalHandles));
  return 0;
 }

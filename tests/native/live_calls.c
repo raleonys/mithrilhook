@@ -19,6 +19,17 @@ static void check(BOOL ok,const char *message)
     ++checks;
     if(!ok){fprintf(stderr,"FAIL: %s error=%lu\n",message,GetLastError());ExitProcess(1);}
 }
+static void check_status(MTH_STATUS status,const char *message,unsigned session,unsigned cycle)
+{
+    DWORD error=GetLastError();
+    if(status!=MTH_OK)
+    {
+        fprintf(stderr,"LIVE_CALLS_OPERATION session=%u cycle=%u operation=%s status=%s status_value=%d win32_error=%lu\n",
+            session,cycle,message,MTH_StatusToString(status),(int)status,(unsigned long)error);
+        fflush(stderr);SetLastError(error);
+    }
+    check(status==MTH_OK,message);
+}
 static DWORD handle_count(void)
 {
     DWORD n;check(GetProcessHandleCount(GetCurrentProcess(),&n),"handle observation");return n;
@@ -81,10 +92,12 @@ int main(void)
         check(state.calls>=256&&state.bad==0,"real calls executed before patch transitions");
         for(cycle=0;cycle<10;++cycle)
         {
-            check(MTH_EnableHook(arena)==MTH_OK,"single enable with active calls");results(&state,47);
-            check(MTH_DisableHook(arena)==MTH_OK,"single disable with active calls");results(&state,12);
-            check(MTH_QueueEnableHook(arena)==MTH_OK&&MTH_ApplyQueued()==MTH_OK,"queued enable with active calls");results(&state,47);
-            check(MTH_QueueDisableHook(arena)==MTH_OK&&MTH_ApplyQueued()==MTH_OK,"queued disable with active calls");results(&state,12);
+            check_status(MTH_EnableHook(arena),"single enable with active calls",session,cycle);results(&state,47);
+            check_status(MTH_DisableHook(arena),"single disable with active calls",session,cycle);results(&state,12);
+            check_status(MTH_QueueEnableHook(arena),"queue enable with active calls",session,cycle);
+            check_status(MTH_ApplyQueued(),"apply queued enable with active calls",session,cycle);results(&state,47);
+            check_status(MTH_QueueDisableHook(arena),"queue disable with active calls",session,cycle);
+            check_status(MTH_ApplyQueued(),"apply queued disable with active calls",session,cycle);results(&state,12);
         }
         check(SetEvent(state.stop),"request caller quiescence");
         check(WaitForSingleObject(thread,5000)==WAIT_OBJECT_0,"join before trampoline removal");
@@ -105,7 +118,7 @@ int main(void)
             {
                 unsigned index;
                 fprintf(stderr,"LIVE_CALLS_TEARDOWN session=%u status=%s status_value=%d win32_error=%lu target_called=%u target_result=%d bytes_restored=%u\n",
-                    session,MTH_StatusToString(shutdown),(int)shutdown,shutdownError,
+                    session,MTH_StatusToString(shutdown),(int)shutdown,(unsigned long)shutdownError,
                     (unsigned)(shutdown==MTH_OK),result,(unsigned)restored);
                 fprintf(stderr,"LIVE_CALLS_SOURCE expected=");
                 for(index=0;index<sizeof bytes;++index)fprintf(stderr,"%02x",bytes[index]);
