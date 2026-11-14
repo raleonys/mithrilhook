@@ -1,5 +1,13 @@
 # Shared Win32 teardown intermittently refuses after caller drain
 
+**Status: resolved and included in 1.0.4 (PR #21, originating in review #22).** Retirement tracks occupied slots while excluding free slots and allocator headers.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 ## Review status
 
 This review corrects the retirement ownership predicate after a repeated genuine
@@ -30,8 +38,8 @@ actual  =8b44240483c007c20400909090909090
 
 Across the two attempts, 70 independent processes completed 1,400 sessions
 and 56,000 patch transitions before the two failures. The ordinary CTest run
-in each job passed before the stress step. PR #21 changes documentation and
-the source manifest only, so it cannot alter the engine path under test.
+in each job passed before the stress step. The initial PR #21 revision in those attempts changed documentation and the
+source manifest only, so it could not alter the engine path under test.
 
 The expanded PR #22 run reproduced the Win32 failure a third time in process
 44, again in session zero with exact source restoration. Its immediate Win32

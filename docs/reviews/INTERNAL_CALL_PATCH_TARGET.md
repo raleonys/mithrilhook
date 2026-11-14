@@ -1,9 +1,17 @@
 # Internal CALL targets inside the patch are not remapped
 
+**Status: resolved and included in 1.0.4 (PR #18).** Copied internal CALL destinations are refused before publication.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 ## Review status
 
-The initial report did not change the runtime engine. A correction and tests
-are now included in this same PR; the original observations remain below.
+The initial report did not change the runtime engine. The correction and tests
+were subsequently included in the same PR; the original observations remain below.
 The finding was reproduced against `9f822317bcf3fa52a12683e0fbfaf1e28e3bcaee`,
 the merge commit of PR #17 and current `master` at the time of review.
 
@@ -125,6 +133,6 @@ A native negative control removes only the new CALL guard and requires exit 1
 at exactly `internal CALL refuses before original publication`; no fault or
 timeout can satisfy it. Exact-head Windows run links are recorded in PR #18.
 
-This finding blocks publication of the candidate until the correction and
-fresh native evidence are reviewed. Historical #17 timings/packages keep
+This finding blocked publication of that development candidate until the
+correction and fresh native evidence were reviewed. Historical #17 timings/packages keep
 their original source identity and do not validate this correction.

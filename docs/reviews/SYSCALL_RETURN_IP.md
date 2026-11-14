@@ -1,5 +1,13 @@
 # Relocated SYSCALL exposes the trampoline return address
 
+**Status: resolved and included in 1.0.4 (PR #20).** Copied SYSCALL and the documented unsupported transition classes are refused.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 ## Review status
 
 The initial review was report-only. The correction and regression tests are
@@ -121,8 +129,8 @@ CALL/x87/unwind/retirement controls remain in the complete matrix.
 
 ## Version and publication
 
-The owner selected version 1.0.2 for stable tag/release publication after these
-checks. Canonical VERSION, numeric/full package/DLL metadata, stable CMake
+During this review the owner selected development version 1.0.2 for a planned
+publication after those checks; that version was not published. Canonical VERSION, numeric/full package/DLL metadata, stable CMake
 requests, README/changelog and release documentation are updated together.
 The prepared 1.0.1 was not tagged or published. Fresh exact-source Windows,
 package and broad benchmark evidence is recorded in PR #20; earlier records

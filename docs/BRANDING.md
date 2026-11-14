@@ -32,7 +32,7 @@ Public names are:
 | DLL product name | `MithrilHook` |
 
 The installed logo is under `share/mithrilhook/branding`; this guide is under
-`share/mithrilhook/doc`, using the configured CMake data directory. The installed
+`share/mithrilhook/doc/docs`, using the configured CMake data directory. The installed
 license directory retains the GPL distribution license and upstream notices.
 
 Brand artwork is included in the GPL-3.0-only fork distribution. References to

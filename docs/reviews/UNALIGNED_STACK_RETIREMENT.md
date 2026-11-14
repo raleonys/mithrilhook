@@ -1,5 +1,13 @@
 # Unaligned stack owners bypass generated-code retirement checks
 
+**Status: resolved and included in 1.0.4 (PR #23).** Every complete pointer window is scanned across read/region boundaries.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 ## Review status
 
 This review corrects the retirement scan with alignment-safe byte windows. The
@@ -134,9 +142,9 @@ Both shared cells pass 250 independent live-call processes each, 400,000 combine
 transitions and 356,183,335 actual calls with zero bad results/residual handles.
 Portable decoder/relocator sanitizers pass but do not execute this retirement path.
 
-VERSION remains the unpublished owner-selected 1.0.3. Earlier prepared archives
-predate this correction and must not be treated as corrected packages. No tag,
-draft or release is created by this work.
+At this review stage VERSION was the unpublished owner-selected 1.0.3.
+Packages prepared before the correction did not validate it. The public release
+is 1.0.4; see the current release evidence linked above.
 
 The same corrected source passed the full five-environment, eight-engine,
 38-workload comparison in

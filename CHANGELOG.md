@@ -3,9 +3,12 @@
 VERSION is the canonical distribution version. This history groups changes
 by their resulting behavior and links the implementing pull requests.
 
-## [1.0.3] — prepared, not published
+## [1.0.4] — 2026-11-14
 
 ### Added
+
+- First public stable release, v1.0.4, incorporating the complete reviewed
+  MithrilHook development history below.
 
 - Independent Windows x86/x64 library identity: MithrilHook.h, the MTH_* API,
   MithrilHook::mithrilhook CMake target and mithrilhook DLL. There are thirteen
@@ -21,7 +24,7 @@ by their resulting behavior and links the implementing pull requests.
   negative controls, binary receipts and recomputed statistics are retained.
 - Independent installed-package consumers across static/shared, Debug/Release,
   MSVC/clang-cl and x64/Win32 builds, with actual hook/original/retirement calls.
-- A canonical VERSION file and consistent 1.0.3 CMake/package/DLL metadata,
+- A canonical VERSION file and consistent 1.0.4 CMake/package/DLL metadata,
   release resource flags and versioned validation artifacts.
 
 ### Fixed
@@ -36,7 +39,7 @@ by their resulting behavior and links the implementing pull requests.
 - Track occupied buffer slots instead of treating a complete allocation page as
   a published trampoline. Unused-slot/header values no longer cause whole-engine
   shutdown to refuse; every byte of live code/metadata slots still blocks unsafe
-  retirement. Preserve allocation ownership after failed release. ([#22])
+  retirement. Preserve allocation ownership after failed release. ([#21], [#22])
 
 - Correct single-disable peer IP mapping, repair peer IPs against physically
   committed writes after partial failures, and retain failed cleanup owners.
@@ -81,14 +84,14 @@ by their resulting behavior and links the implementing pull requests.
 - Replace the master logo with the owner-supplied transparent PNG, preserving
   its exact bytes and dimensions in README and installed packages. Record the
   new artwork/archive identity in the branding metadata. ([#20])
-- The installed package exposes version 1.0.3 without a prerelease suffix.
-  Numeric requests, including exact 1.0.3, work without prerelease opt-in.
-  CMake and Windows fixed metadata use 1.0.3; DLL prerelease flags are clear.
+- The installed package exposes version 1.0.4 without a prerelease suffix.
+  Numeric requests, including exact 1.0.4, work without prerelease opt-in.
+  CMake and Windows fixed metadata use 1.0.4; DLL prerelease flags are clear.
   Static/shared consumers retain their matching MSVC runtime configuration.
 - Distribution remains GPL-3.0-only. Original MinHook/HDE BSD notices and the
   separately authorized SAFE-FREEZE notice remain intact; these are not three
   alternative licenses for the full fork. The independent branding identity
-  is retained; the owner-selected 1.0.2 logo is recorded above. ([#2], [#20])
+  is retained; the owner-supplied master PNG is recorded above. ([#2], [#20])
 - Supported instruction and unwind forms are finite. Generated nonleaf metadata
   requires Windows 10 or later; unknown/chained formats and untranslated
   handler-bearing bodies remain refused. Multi-hook writes remain sequential.
@@ -100,20 +103,26 @@ by their resulting behavior and links the implementing pull requests.
   exact source restoration, zero bad results and zero residual handles.
 - Add exact undefined-trap and whole-page-predicate negative controls, genuine
   Windows event/peer cases, and complete occupied-slot lifecycle checks.
-- Publication is paused by the owner. This prepared version creates no tag,
-  release or draft; an explicit publish instruction is required.
+- Preserve the documentation and metadata directory tree in installed packages
+  so relative changelog and guide links remain valid.
+- Audit the complete documentation set for 1.0.4, mark resolved reviews as
+  historical, archive the initial local-validation snapshot without rewriting
+  it, and check current versions, local links and exact branding automatically.
+- Publish the stable v1.0.4 tag with matching packages, source, checksums and
+  exact-source validation/benchmark artifacts. This is the first public release.
 
 Exact revisions, configurations and completed runs are recorded in
 [Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
-current PR [#23]. Earlier results keep their original source identities.
+[release evidence](https://github.com/raleonys/mithrilhook/releases/download/v1.0.4/MithrilHook-1.0.4-VALIDATION.json).
+Earlier results keep their original source identities.
 Library publication is owner-controlled after the selected source's correctness,
 package, performance and source/license review. Citrine integration and actual
 application/game lifecycle acceptance are the following engineering phase.
 
 ## Development history before the first release
 
-The earlier 0.1.0, 1.0.0-rc.1 and prepared 1.0.1/1.0.2 identifiers represented
-development work; neither 1.0.1 nor 1.0.2 was published. They are not listed as
+The earlier 0.1.0, 1.0.0-rc.1 and prepared 1.0.1/1.0.2/1.0.3 identifiers
+represented development work; none was published. They are not listed as
 prior stable releases. The initial independent core, branding, thread/batch
 review, generated unwind support and evidence audit were developed in PRs
 [#1], [#2], [#3], [#4] and [#5]. Benchmark/package infrastructure was merged in

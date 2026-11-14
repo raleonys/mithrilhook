@@ -1,5 +1,13 @@
 # Relocated x87 environment save exposes the trampoline address
 
+**Status: resolved and included in 1.0.4 (PR #19).** Copied x87 producers and unproven extended-state layouts are refused.
+
+This is a historical review record. The finding, reproductions, counts and
+version decisions below refer to their stated development baselines. They are
+not open defects or current publication instructions. Current contracts and
+release evidence are in [API](../API.md), [Safety](../SAFETY.md),
+[Validation](../VALIDATION.md) and [Release](../RELEASE.md).
+
 ## Review status
 
 The initial review was report-only. The correction and regression tests are
@@ -145,9 +153,8 @@ PR #19.
 
 ## Version and changelog
 
-The owner selected version 1.0.1 without an RC suffix. VERSION, numeric/full
-CMake/package/DLL metadata, resource flags, current documentation and changelog
-are updated together. Installed consumers require exact 1.0.1 with prerelease
+During this review the owner selected development version 1.0.1 without an RC
+suffix. Its VERSION, numeric/full CMake/package/DLL metadata, resource flags,
+documentation and changelog were updated together. Its consumers required exact 1.0.1 with prerelease
 consent disabled and verify normal compatible/incompatible numeric requests.
-No tag/release publication, license change or Citrine integration is performed
-by this PR. Prior benchmark/package records remain pinned to their own bytes.
+That PR performed no tag/release publication, license change or Citrine integration. Prior benchmark/package records remain pinned to their own bytes.
