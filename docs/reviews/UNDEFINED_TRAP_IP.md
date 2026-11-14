@@ -2,7 +2,7 @@
 
 ## Review status
 
-This is a report-only review. It does not change the runtime engine. The
+The correction refuses copied UD0/UD1/UD2 before original publication. The
 finding was reproduced against `c60123e4c15c9be982e3b9238cef220a298d140b`,
 the merge commit of PR #20 and current `master` at the time of review.
 
@@ -85,3 +85,22 @@ The negative control should remove only the new guard and require a failure at
 the exact refusal assertion. Structural privileged cases, unrelated process
 termination and a handler that does not observe the expected exception code
 and address must not count as proof.
+
+## Correction and verification
+
+The strict relocator now rejects decoded `0F 0B`, `0F B9 /r` and `0F FF /r`
+whenever their instruction starts inside the copied five-byte prefix. No decoder
+recognition or public API is removed. The guard is independent of ModR/M
+addressing and accepted prefixes. Traps entirely after that prefix stay at source.
+
+The portable ASan/UBSan suite passes 143,571 relocation checks plus 112 decoder
+checks. It covers every ModR/M byte, all five copied offsets, eight legacy-prefix
+choices and all sixteen single REX prefixes, plus source-resident controls.
+
+The new production-linked Windows fixture observes each canonical source trap
+with a bounded vectored handler: only the exact owned address and
+`EXCEPTION_ILLEGAL_INSTRUCTION` may resume. It exercises the refusal matrix and
+executes source-resident traps through source and original entries before and
+after enable/disable, with exact byte and handle restoration. Removing only the
+new guard must exit 1 at `undefined trap refuses before original publication`,
+before any unsafe original executes. Native results are pending validation.

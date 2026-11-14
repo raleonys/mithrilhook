@@ -375,6 +375,11 @@ BOOL MthInternal_CreateTrampolineFunction(PTRAMPOLINE ct)
                 hs.opcode == 0xCB || hs.opcode == 0x9A || hs.opcode == 0xEA ||
                 (hs.opcode == 0xFF && (hs.modrm_reg == 3 || hs.modrm_reg == 5)))
                 return FALSE;
+            /* UD0/UD1/UD2 deliberately raise #UD at their own IP. Copying
+             * them would expose the trampoline as the exception address. */
+            if (hs.opcode == 0x0F && (hs.opcode2 == 0x0B ||
+                hs.opcode2 == 0xB9 || hs.opcode2 == 0xFF))
+                return FALSE;
             /* A copied x87 operation can publish its new IP via a later
              * environment save, even beyond this prefix. There is no bounded
              * FIP translation contract. Refuse the entire copied x87 class,

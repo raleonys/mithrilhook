@@ -150,6 +150,11 @@
       "id": "F30",
       "change": "Refuse copied SYSCALL and unsupported transition/interrupt/far-return classes before publication; preserve source-resident syscall bodies after an ordinary prefix",
       "origin": "MithrilHook review #20; inherited copying of SYSCALL changes its architectural next RIP exposed in RCX"
+    },
+    {
+      "id": "F31",
+      "change": "Refuse copied UD0/UD1/UD2 before their deliberate invalid-opcode exception address can move to a trampoline; preserve source-resident trap bodies",
+      "origin": "MithrilHook review #21; omission in the explicit copied-trap refusal policy"
     }
   ],
   "excluded_unreviewed_proposals": {
