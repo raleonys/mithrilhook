@@ -46,6 +46,12 @@ The handler observed the exact address of the instruction that raised each
 event. Source and trampoline had distinct addresses; no decoder failure,
 unrelated crash or timeout was accepted as evidence.
 
+An independent x64 flow-classification sweep of valid one-byte and legacy
+`0F` exception/interrupt forms found the existing INT/INT1 cases refused. The
+accepted exception-class results were confined to `UD0`, `UD1` and `UD2`,
+including the decoded ModR/M forms. This bounds the report to the identified
+policy omission rather than treating every privileged opcode as equivalent.
+
 ## Scope
 
 This report does not claim general exception-address translation for every
