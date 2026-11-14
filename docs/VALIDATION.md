@@ -62,7 +62,27 @@ failed release ownership, double-free refusal and the old whole-block predicate
 as an exact negative control. Both Release shared cells run 250 independent
 live-call processes: 5,000 sessions and 200,000 patch transitions per architecture,
 with first-call teardown, zero bad results and zero residual handles required.
-No retry-only success is accepted. Corrected-source native results are pending.
+No retry-only success is accepted.
+
+Combined source `f638fa03e7f5aaf72945243e97e94117de9620c7` passed
+[43556129592](https://github.com/raleonys/mithrilhook/actions/runs/43556129592):
+all seven native configurations, 259 native tests including consumers and two
+portable tests. Each native cell reports 61,800 undefined-trap assertions and
+both new exact negative controls. x64 shared completed 250 processes and
+230,341,848 actual calls; Win32 shared completed 250 processes and 122,462,513
+actual calls. Together: 10,000 sessions, 400,000 patch transitions, zero bad
+results and zero residual handles. Artifact ZIP digests, source identities,
+JUnit cases, installed packages and DLL resources were independently checked.
+The earlier corrected-retirement-only source `2e474049bb4f6470724be6d9248a5d91b045795a`
+also passed all seven native cells in
+[43555956129](https://github.com/raleonys/mithrilhook/actions/runs/43555956129).
+An independent repeat at the same combined commit passed all cells in
+[43556595298](https://github.com/raleonys/mithrilhook/actions/runs/43556595298),
+including another 500 processes, 10,000 sessions and 400,000 transitions. The
+two combined-source runs total 1,000 independent processes, 20,000 sessions,
+800,000 transitions and 809,933,121 actual calls, with zero bad results or
+residual handles. These results belong to their recorded commits, not
+subsequent documentation bytes.
 
 ## Completed predecessor evidence
 

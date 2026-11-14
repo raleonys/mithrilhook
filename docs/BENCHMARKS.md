@@ -25,6 +25,17 @@ benchmark uses `install_hooks=false` and cannot rank hook engines either.
 The prepared distribution is 1.0.3. Its combined-source broad run is tracked
 in [PR #22](https://github.com/raleonys/mithrilhook/pull/22). Earlier records retain
 their original version and commit; no predecessor result is renamed as 1.0.3.
+Combined source `f638fa03e7f5aaf72945243e97e94117de9620c7` passed all five
+jobs in [43556129567](https://github.com/raleonys/mithrilhook/actions/runs/43556129567):
+eight engines, 38 workloads, seven paired rounds and 10,640 isolated positive
+children. Artifact digests and exact source/version identities were verified;
+all five retained datasets passed independent Linux offline audits of raw
+streams, checksums, recipes, identities and recomputed statistics. All five
+actual-API create/remove probes accepted 11/11 targets without enabling or
+executing those system functions. Detailed timings and raw evidence are retained
+with that run and in the prepared unpublished asset bundle. This is measured
+source evidence, not application acceptance or an equivalent-safety ranking.
+
 The previous unpublished 1.0.2 source `48fbc8e53f84c19347fb9419239165c59955cc43`
 passed all five environments in
 [43523185080](https://github.com/raleonys/mithrilhook/actions/runs/43523185080),

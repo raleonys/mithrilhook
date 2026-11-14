@@ -108,7 +108,7 @@ References:
 
 ## Validation and related asset change
 
-The current workflow registers 23 tests on x64 and 18 on Win32, across seven
+The historical PR #4 workflow registered 23 tests on x64 and 18 on Win32, across seven
 native configurations: 146 native executions plus two portable tests. The merged
 PR #4 source passed [run 43456198204](https://github.com/raleonys/mithrilhook/actions/runs/43456198204).
 These are correctness results, not comparative performance measurements. See

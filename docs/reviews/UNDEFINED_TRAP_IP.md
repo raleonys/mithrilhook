@@ -103,4 +103,9 @@ with a bounded vectored handler: only the exact owned address and
 executes source-resident traps through source and original entries before and
 after enable/disable, with exact byte and handle restoration. Removing only the
 new guard must exit 1 at `undefined trap refuses before original publication`,
-before any unsafe original executes. Native results are pending validation.
+before any unsafe original executes. Combined-source native run
+[43556129592](https://github.com/raleonys/mithrilhook/actions/runs/43556129592)
+passed all seven configurations on `f638fa03e7f5aaf72945243e97e94117de9620c7`,
+61,800 fixture assertions per cell and the exact guard-removal control. This
+combined source also includes #22's separate retirement correction; the earlier
+standalone #21 run passed the new trap tests but exposed that teardown defect.

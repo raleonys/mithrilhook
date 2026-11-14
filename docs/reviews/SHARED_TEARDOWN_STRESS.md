@@ -115,5 +115,20 @@ exact control restores only the old whole-block predicate and must exit 1 at
 Windows peer separately proves first-call cleanup with an unused-slot register
 value and allocator-header stack word, while the existing live-pointer checks
 continue to refuse retirement. Both shared architectures retain the unchanged
-250-independent-process live-call stress gate (increased from 100). Corrected native results are
-pending validation.
+250-independent-process live-call stress gate (increased from 100).
+
+Combined source `f638fa03e7f5aaf72945243e97e94117de9620c7` passed
+[43556129592](https://github.com/raleonys/mithrilhook/actions/runs/43556129592):
+all seven native cells and both 250-process stress gates, 10,000 sessions,
+400,000 patch transitions, 352,804,361 actual calls, zero bad results and zero
+residual handles. All 500 independent processes completed their first teardown
+successfully. Both new exact controls passed. This demonstrates the diagnosed
+unused-slot correction under the measured conditions; stale values matching
+an occupied slot can still conservatively defer cleanup. The host's admission,
+drain and module-lifetime obligations remain unchanged.
+
+An independent repeat at the same commit,
+[43556595298](https://github.com/raleonys/mithrilhook/actions/runs/43556595298),
+passed all seven native cells and both stress gates again. The two combined-source
+runs total 1,000 independent processes, 20,000 sessions, 800,000 transitions and
+809,933,121 actual calls, with zero bad results or residual handles.
