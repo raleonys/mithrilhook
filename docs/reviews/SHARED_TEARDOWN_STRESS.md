@@ -33,6 +33,12 @@ and 56,000 patch transitions before the two failures. The ordinary CTest run
 in each job passed before the stress step. PR #21 changes documentation and
 the source manifest only, so it cannot alter the engine path under test.
 
+The expanded PR #22 run reproduced the Win32 failure a third time in process
+44, again in session zero with exact source restoration. Its immediate Win32
+error was `ERROR_ACCESS_DENIED` (5). The three runs therefore completed 113
+independent Win32 processes, 2,260 sessions and 90,400 patch transitions before
+three same-signature teardown refusals.
+
 The engine safely refused rather than leaving patched bytes: the exact target
 image was restored. The defect is nondeterministic retirement completion after
 the fixture has explicitly joined its only caller, not demonstrated unsafe
@@ -50,6 +56,13 @@ This review therefore runs the unchanged stress recipe on both Release shared
 architectures. A passing x64 run is target-specific evidence for that run, not
 a correction of the Win32 defect or proof that the failure is impossible at a
 higher process count.
+
+The PR #22 x64 shared job completed all 100 independent processes: 2,000
+sessions, 80,000 patch transitions and 78,121,150 actual target/original calls.
+It reported zero bad results and zero residual handles. The observed teardown
+failure is consequently not established on the intended x64 deployment
+architecture; it remains a reproduced Win32 shared defect and an x64 stress
+coverage requirement.
 
 ## Required diagnosis and acceptance
 
