@@ -7,8 +7,8 @@
 **Distribution license: [GPL-3.0-only](LICENSE).** Original third-party notices
 are retained separately; they are not alternative licenses for the complete fork.
 
-**Version: 1.0.2.** The canonical version is in [VERSION](VERSION).
-CMake, installed packages and DLL resources use 1.0.2 without a prerelease
+**Version: 1.0.3.** The canonical version is in [VERSION](VERSION).
+CMake, installed packages and DLL resources use 1.0.3 without a prerelease
 suffix or prerelease opt-in. See [Release preparation](docs/RELEASE.md).
 
 MithrilHook is an independently maintained Windows x86/x64 function-hooking
@@ -21,12 +21,11 @@ instruction relocation. **It is not a production acceptance or universal
 unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
 
-The merged baseline through PR #19 passed 224 native Windows/package tests and
-two portable sanitizer tests. [PR #20](https://github.com/raleonys/mithrilhook/pull/20)
-adds explicit transition-instruction refusal, genuine Windows syscall/body
-controls and version 1.0.2. Its correctness/package and broad performance
-results are pinned to that exact source; older reports keep their identities.
-Native hook-engine comparisons retain source-specific reports and raw evidence; see
+The 1.0.3 source combines [PR #21](https://github.com/raleonys/mithrilhook/pull/21)'s
+undefined-trap refusal with [PR #22](https://github.com/raleonys/mithrilhook/pull/22)'s
+occupied-slot retirement correction. Publication is paused by the owner; setting
+VERSION does not create a tag or release. Completed validation and performance
+records identify their exact sources. See [Validation](docs/VALIDATION.md),
 [Benchmarks](docs/BENCHMARKS.md) and [Remaining work](docs/REMAINING_WORK.md).
 
 ## What is included
@@ -108,8 +107,8 @@ cmake --build build/portable
 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/portable --output-on-failure
 ```
 
-The GitHub workflow provides genuine MSVC x86/x64 Debug/Release, a shared x64
-build, clang-cl x64 and portable checks. Configuration is not a test result.
+The GitHub workflow provides genuine MSVC x86/x64 Debug/Release, shared x64 and Win32
+builds, clang-cl x64 and portable checks. Configuration is not a test result.
 
 ## Provenance and licenses
 

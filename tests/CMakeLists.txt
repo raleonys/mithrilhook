@@ -37,6 +37,7 @@ mth_linked(mithrilhook_internal_branch_contracts native/internal_branches.c)
 mth_linked(mithrilhook_internal_call_contracts native/internal_calls.c)
 mth_linked(mithrilhook_x87_state_contracts native/x87_state.c)
 mth_linked(mithrilhook_transition_contracts native/transitions.c)
+mth_linked(mithrilhook_undefined_trap_contracts native/undefined_traps.c)
 mth_linked(mithrilhook_overlapping_patch_contracts native/overlapping_patches.c)
 mth_fixture(mithrilhook_patch_interval_contracts native/patch_intervals.c)
 mth_linked(mithrilhook_target_probe native/target_probe.c)
@@ -146,3 +147,10 @@ target_include_directories(mithrilhook_control_unused_slot PRIVATE ${PROJECT_SOU
 target_compile_definitions(mithrilhook_control_unused_slot PRIVATE MTH_TEST_BUFFER_SOURCE="${CMAKE_CURRENT_BINARY_DIR}/controls/unused-slot-buffer.c" _WIN32_WINNT=0x0601)
 add_test(NAME mithrilhook_control_unused_slot COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py run --mode unused-slot -- $<TARGET_FILE:mithrilhook_control_unused_slot> unused-slot)
 set_tests_properties(mithrilhook_control_unused_slot PROPERTIES TIMEOUT 45)
+add_executable(mithrilhook_control_undefined_trap native/undefined_traps.c
+  ${PROJECT_SOURCE_DIR}/src/hook.c ${PROJECT_SOURCE_DIR}/src/buffer.c
+  ${PROJECT_SOURCE_DIR}/${MTH_HDE} ${CMAKE_CURRENT_BINARY_DIR}/controls/undefined-trap.c)
+target_include_directories(mithrilhook_control_undefined_trap PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(mithrilhook_control_undefined_trap PRIVATE _WIN32_WINNT=0x0601)
+add_test(NAME mithrilhook_control_undefined_trap COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/negative_controls.py run --mode undefined-trap -- $<TARGET_FILE:mithrilhook_control_undefined_trap>)
+set_tests_properties(mithrilhook_control_undefined_trap PROPERTIES TIMEOUT 45)

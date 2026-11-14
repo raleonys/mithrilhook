@@ -1,11 +1,11 @@
 # Release and integration status
 
-The source version is 1.0.2, without an RC suffix. It contains the reviewed
-corrections through PR #19 plus PR #20's explicit transition-instruction policy.
-The owner selected 1.0.2 for stable tag/release publication after validation.
-The release process pins its source, package and evidence identities; it does
-not transfer results from earlier 1.0.1 or RC bytes. Next comes Citrine
-integration and actual application lifecycle acceptance.
+The prepared source version is 1.0.3, without an RC suffix. It includes the
+merged corrections through PR #20 plus PR #21's copied undefined-trap refusal
+and PR #22's exact occupied-slot retirement checks. Earlier 1.0.1 and 1.0.2
+preparations were not published. Tag/release publication is paused until the
+owner explicitly says to publish. Validation, review and package preparation
+may continue during that hold. Citrine integration remains a later task.
 
 ## Library release gates
 

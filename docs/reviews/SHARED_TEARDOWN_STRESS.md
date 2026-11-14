@@ -115,5 +115,5 @@ exact control restores only the old whole-block predicate and must exit 1 at
 Windows peer separately proves first-call cleanup with an unused-slot register
 value and allocator-header stack word, while the existing live-pointer checks
 continue to refuse retirement. Both shared architectures retain the unchanged
-100-independent-process live-call stress gate. Corrected native results are
+250-independent-process live-call stress gate (increased from 100). Corrected native results are
 pending validation.

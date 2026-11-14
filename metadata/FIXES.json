@@ -150,6 +150,16 @@
       "id": "F30",
       "change": "Refuse copied SYSCALL and unsupported transition/interrupt/far-return classes before publication; preserve source-resident syscall bodies after an ordinary prefix",
       "origin": "MithrilHook review #20; inherited copying of SYSCALL changes its architectural next RIP exposed in RCX"
+    },
+    {
+      "id": "F31",
+      "change": "Refuse copied UD0/UD1/UD2 before their deliberate invalid-opcode exception address can move to a trampoline; preserve source-resident trap bodies",
+      "origin": "MithrilHook review #21; omission in the explicit copied-trap refusal policy"
+    },
+    {
+      "id": "F32",
+      "change": "Track allocated slots across publication and failed/successful release; whole-engine retirement ignores unused slots/header while preserving all occupied code/metadata byte checks",
+      "origin": "MithrilHook review #22; actual Win32 stack word 0x01010100 falsely matched an unused slot beside the sole live trampoline at 0x01010FE0"
     }
   ],
   "excluded_unreviewed_proposals": {

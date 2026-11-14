@@ -223,6 +223,35 @@ static void x87_state_cases(BYTE *source,BYTE *trampoline)
     }
 }
 
+static void undefined_trap_cases(BYTE *source,BYTE *trampoline)
+{
+    const BYTE opcodes[]={0x0b,0xb9,0xff};
+    const BYTE prefixes[]={0,0x66,0x67,0x2e,0xf2,0xf3,0x64,0x65};
+    UINT kind,prefix,site,modrm;
+    for(kind=0;kind<3;++kind)
+    for(prefix=0;prefix<24;++prefix)
+    for(site=0;site<5;++site)
+    for(modrm=0;modrm<(kind?256U:1U);++modrm)
+    {
+        UINT n=site;TRAMPOLINE ct;BYTE snapshot[64];
+        memset(source,0x90,64);
+        if(prefix)source[n++]=prefix<8?prefixes[prefix]:(BYTE)(0x40+prefix-8);
+        source[n++]=0x0f;source[n++]=opcodes[kind];
+        if(kind)source[n++]=(BYTE)modrm;
+        source[24]=0xc3;memcpy(snapshot,source,sizeof(snapshot));
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(!MthInternal_CreateTrampolineFunction(&ct),"all copied UD0/UD1/UD2 encodings refuse");
+        check(!memcmp(source,snapshot,sizeof(snapshot)),"undefined-trap refusal preserves source bytes");
+    }
+    for(kind=0;kind<3;++kind)
+    for(site=5;site<10;++site)
+    {
+        TRAMPOLINE ct;memset(source,0x90,64);source[site]=0x0f;source[site+1]=opcodes[kind];source[site+2]=0xc0;source[site+3]=0xc3;
+        memset(&ct,0,sizeof(ct));ct.pTarget=source;ct.pTrampoline=trampoline;ct.pDetour=source+128;
+        check(MthInternal_CreateTrampolineFunction(&ct),"a deliberate trap beyond the copied prefix stays at its source IP");
+    }
+}
+
 static void transition_cases(BYTE *source,BYTE *trampoline)
 {
     const struct {BYTE bytes[8];UINT size;} gates[]={
@@ -405,6 +434,7 @@ int main(void)
     internal_call_cases(code + 1024, code + 512);
     x87_state_cases(code + 1024, code + 512);
     transition_cases(code + 1024, code + 512);
+    undefined_trap_cases(code + 1024, code + 512);
     rip_patch_cases(code + 1024, code + 512);
     push_prefix_cases(code + 1024, code + 512);
     {

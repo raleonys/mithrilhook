@@ -41,9 +41,11 @@ TRANSITION_GUARD='''            if ((hs.opcode == 0x0F && (hs.opcode2 == 0x05 ||
                 (hs.opcode == 0xFF && (hs.modrm_reg == 3 || hs.modrm_reg == 5)))
                 return FALSE;
 '''
+UNDEFINED_GUARD='            /* UD0/UD1/UD2 deliberately raise #UD at their own IP. Copying\n             * them would expose the trampoline as the exception address. */\n            if (hs.opcode == 0x0F && (hs.opcode2 == 0x0B ||\n                hs.opcode2 == 0xB9 || hs.opcode2 == 0xFF))\n                return FALSE;\n'
 TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before original publication',
  'x87':'FAIL: x87 producer refuses before original publication',
- 'transition':'FAIL: transition instruction refuses before original publication'}
+ 'transition':'FAIL: transition instruction refuses before original publication',
+ 'undefined-trap':'FAIL: undefined trap refuses before original publication'}
 BUFFER_ORACLE='FAIL: unused slot and header values do not block whole-engine retirement'
 def prepare(output):
  output=Path(output).resolve()
@@ -86,6 +88,8 @@ def prepare(output):
  (output/'x87.c').write_text(trampoline.replace(X87_GUARD,'',1))
  if trampoline.count(TRANSITION_GUARD)!=1:raise ValueError('Missing unique transition relocation refusal')
  (output/'transition.c').write_text(trampoline.replace(TRANSITION_GUARD,'',1))
+ if trampoline.count(UNDEFINED_GUARD)!=1:raise ValueError('Missing unique undefined-trap refusal')
+ (output/'undefined-trap.c').write_text(trampoline.replace(UNDEFINED_GUARD,'',1))
 def run(mode,command):
  result=subprocess.run(command,capture_output=True,text=True,timeout=35)
  print(result.stdout,end='');print(result.stderr,end='',file=sys.stderr)
