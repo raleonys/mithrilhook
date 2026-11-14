@@ -26,6 +26,10 @@ by their resulting behavior and links the implementing pull requests.
 
 ### Fixed
 
+- Inspect every complete pointer-width window in peer stack bytes, including
+  unaligned owners and values spanning read/region boundaries. Preserve occupied
+  slot ownership on refusal and retain read/protection/budget failure checks. ([#23])
+
 - Refuse copied UD0/UD1/UD2 before their deliberate invalid-opcode exception
   address can move to a trampoline. Keep trap bodies after the copied prefix
   at their source addresses and validate exact Windows exception events. ([#21])
@@ -101,7 +105,7 @@ by their resulting behavior and links the implementing pull requests.
 
 Exact revisions, configurations and completed runs are recorded in
 [Validation](docs/VALIDATION.md), [Benchmarks](docs/BENCHMARKS.md) and the
-combined PR [#22]. Earlier results keep their original source identities.
+current PR [#23]. Earlier results keep their original source identities.
 Library publication is owner-controlled after the selected source's correctness,
 package, performance and source/license review. Citrine integration and actual
 application/game lifecycle acceptance are the following engineering phase.
@@ -134,3 +138,5 @@ Report-only review PRs are not counted as additional software releases.
 
 [#21]: https://github.com/raleonys/mithrilhook/pull/21
 [#22]: https://github.com/raleonys/mithrilhook/pull/22
+
+[#23]: https://github.com/raleonys/mithrilhook/pull/23

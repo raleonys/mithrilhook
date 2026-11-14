@@ -27,7 +27,11 @@ static unsigned fail_write_call,write_calls;
 static unsigned fail_free_after,free_calls;
 static unsigned checks, enumerations, resumes;
 static DWORD_PTR peer_ip, peer_register;
-static DWORD_PTR peer_stack[4];
+static DWORD_PTR peer_stack[160];
+static SIZE_T peer_stack_offset, peer_stack_split;
+static unsigned stack_reads, fail_stack_read_after, short_stack_read_after;
+static BOOL fail_stack_query, oversized_stack_region;
+static unsigned bad_stack_region;
 static HANDLE cursor = (HANDLE)(ULONG_PTR)0x6781;
 static HANDLE peer = (HANDLE)(ULONG_PTR)0x6782;
 static HANDLE cursor2 = (HANDLE)(ULONG_PTR)0x6783;
@@ -63,7 +67,7 @@ static BOOL WINAPI context_peer(HANDLE h,LPCONTEXT out) {
         if(fail_context_read_after && context_reads>fail_context_read_after){SetLastError(ERROR_ACCESS_DENIED);return FALSE;}
         if(h==peer2 && fail_second_context){SetLastError(ERROR_ACCESS_DENIED);return FALSE;}
         memset(out,0,sizeof(*out));out->ContextFlags=flags;
-        PEER_IP(out)=h==peer?peer_ip:0;PEER_REGISTER(out)=peer_register;PEER_SP(out)=(DWORD_PTR)(ULONG_PTR)peer_stack;return TRUE;}
+        PEER_IP(out)=h==peer?peer_ip:0;PEER_REGISTER(out)=peer_register;PEER_SP(out)=(DWORD_PTR)(ULONG_PTR)((BYTE*)peer_stack+peer_stack_offset);return TRUE;}
     return GetThreadContext(h,out);
 }
 static BOOL WINAPI set_context_peer(HANDLE h,const CONTEXT* in) {
@@ -73,9 +77,18 @@ static BOOL WINAPI set_context_peer(HANDLE h,const CONTEXT* in) {
 }
 static SIZE_T WINAPI query(LPCVOID address,PMEMORY_BASIC_INFORMATION out,SIZE_T size) {
     ULONG_PTR at=(ULONG_PTR)address,start=(ULONG_PTR)peer_stack,end=start+sizeof(peer_stack);
-    if(at>=start && at<=end){memset(out,0,sizeof(*out));out->BaseAddress=(LPVOID)(at==end?end:start);
-        out->AllocationBase=out->BaseAddress;out->RegionSize=at==end?8:sizeof(peer_stack);
-        out->State=MEM_COMMIT;out->Protect=PAGE_READWRITE;return sizeof(*out);}
+    if(at>=start && at<=end){
+        BOOL second=peer_stack_split && at>=start+peer_stack_split && at<end;
+        ULONG_PTR base=at==end?end:second?start+peer_stack_split:start;
+        if(fail_stack_query && second)return 0;
+        memset(out,0,sizeof(*out));out->BaseAddress=(LPVOID)base;
+        out->AllocationBase=(LPVOID)(at==end?end:start);
+        out->RegionSize=at==end?8:second?end-base:peer_stack_split?peer_stack_split:sizeof(peer_stack);
+        if(oversized_stack_region)out->RegionSize=64*1024*1024+1;
+        out->State=second && bad_stack_region==3?MEM_RESERVE:MEM_COMMIT;
+        out->Protect=second && bad_stack_region==1?PAGE_READWRITE|PAGE_GUARD:
+            second && bad_stack_region==2?PAGE_NOACCESS:PAGE_READWRITE;
+        return sizeof(*out);}
     return VirtualQuery(address,out,size);
 }
 static BOOL WINAPI protect(LPVOID p,SIZE_T n,DWORD mode,PDWORD old) {
@@ -87,8 +100,9 @@ static BOOL WINAPI protect(LPVOID p,SIZE_T n,DWORD mode,PDWORD old) {
 }
 static BOOL WINAPI read_stack(HANDLE process,LPCVOID p,LPVOID out,SIZE_T n,SIZE_T* copied) {
     if((ULONG_PTR)p>=(ULONG_PTR)peer_stack && (ULONG_PTR)p<(ULONG_PTR)peer_stack+sizeof(peer_stack)){
-        if(fail_stack_read){*copied=0;return FALSE;}
-        if(short_stack_read){memcpy(out,p,n);*copied=n-1;return TRUE;}}
+        ++stack_reads;
+        if(fail_stack_read || (fail_stack_read_after && stack_reads>fail_stack_read_after)){*copied=0;return FALSE;}
+        if(short_stack_read || (short_stack_read_after && stack_reads>short_stack_read_after)){memcpy(out,p,n);*copied=n-1;return TRUE;}}
     return ReadProcessMemory(process,p,out,n,copied);
 }
 static BOOL WINAPI flush(HANDLE process,LPCVOID p,SIZE_T n) {
@@ -136,6 +150,8 @@ static void setup(void) {
     late_peer=FALSE;scans=context_reads=fail_context_read_after=0;fail_context_destination=0;
     fail_write_call=write_calls=0;
     fail_free_after=free_calls=0;
+    peer_stack_offset=peer_stack_split=0;stack_reads=fail_stack_read_after=short_stack_read_after=0;
+    fail_stack_query=oversized_stack_region=FALSE;bad_stack_region=0;
     peer_ip=peer_register=0;memset(peer_stack,0,sizeof peer_stack);
     require(MTH_Initialize()==MTH_OK,"initialize completion fixture");
     target=(unsigned char*)VirtualAlloc(NULL,8192,MEM_COMMIT|MEM_RESERVE,PAGE_EXECUTE_READWRITE);
@@ -338,6 +354,63 @@ static void slot_ownership_lifecycle(void) {
     require(g_pMemoryBlocks==NULL,"all ownership blocks retire completely");finish();
 }
 
+static void stack_owner_at(LPVOID original,SIZE_T offset,SIZE_T start,SIZE_T split,UINT interior) {
+    DWORD_PTR value=(DWORD_PTR)(ULONG_PTR)((BYTE*)original+interior);
+    unsigned before=resumes;BYTE snapshot[16];HANDLE heap=g_hHeap;
+    PMEMORY_BLOCK block=g_pMemoryBlocks;
+    require(start<=offset && offset+sizeof(value)<=sizeof(peer_stack),"stack-owner fixture bounds are valid");
+    memset(peer_stack,0,sizeof(peer_stack));memcpy((BYTE*)peer_stack+offset,&value,sizeof(value));
+    peer_stack_offset=start;peer_stack_split=split;memcpy(snapshot,target,sizeof(snapshot));
+    require(MTH_RemoveHook(target)==MTH_ERROR_MEMORY_PROTECT,"unaligned stack owner blocks removal before release");
+    require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"unaligned stack owner blocks whole-engine retirement");
+    require(g_hHeap==heap && g_pMemoryBlocks==block && MthInternal_IsBufferAddress(value) &&
+        FindHookEntry(target)!=INVALID_HOOK_POS,"unaligned refusal preserves exact hook heap and slot owners");
+    require(resumes==before+2 && !HasRetainedThreadOwnership() && !memcmp(target,snapshot,sizeof(snapshot)),
+        "unaligned refusals repay suspensions and preserve all source bytes");
+}
+static void unaligned_stack_retirement(void) {
+    LPVOID original;SIZE_T offset,boundary,start;UINT interior;
+    setup();original=create_at(0);
+    /* The exact stepping mutation fails at this first offset, before a freed
+     * original can ever execute. Projected registers contain no original. */
+    stack_owner_at(original,1,0,0,0);
+    for(offset=0;offset<sizeof(DWORD_PTR);++offset)
+        stack_owner_at(original,offset,0,0,0);
+    for(boundary=64*sizeof(DWORD_PTR);boundary<=128*sizeof(DWORD_PTR);boundary+=64*sizeof(DWORD_PTR))
+        for(offset=1;offset<sizeof(DWORD_PTR);++offset)
+            for(interior=0;interior<2;++interior)
+                stack_owner_at(original,boundary-offset,0,0,interior?MEMORY_SLOT_SIZE-1:0);
+    /* A first region shorter than one pointer and an odd region boundary must
+     * both retain overlap; include non-aligned captured stack pointers. */
+    for(boundary=1;boundary<sizeof(DWORD_PTR);++boundary)
+        stack_owner_at(original,0,0,boundary,0);
+    boundary=3*sizeof(DWORD_PTR)+1;
+    for(offset=1;offset<sizeof(DWORD_PTR);++offset)
+        stack_owner_at(original,boundary-offset,0,boundary,0);
+    for(start=1;start<sizeof(DWORD_PTR);++start)
+        stack_owner_at(original,start+1,start,0,0);
+    stack_owner_at(original,sizeof(peer_stack)-sizeof(DWORD_PTR),1,0,MEMORY_SLOT_SIZE-1);
+    memset(peer_stack,0,sizeof(peer_stack));peer_stack_offset=peer_stack_split=0;finish();
+    /* No complete pointer fits in this final tail: do not read past it or
+     * invent a full address from bytes outside the stack allocation. */
+    setup();create_at(0);peer_stack_offset=sizeof(peer_stack)-sizeof(DWORD_PTR)+1;finish();
+}
+static void segmented_stack_failures(void) {
+    unsigned mode;setup();create_at(0);peer_stack_split=sizeof(DWORD_PTR)-1;
+    for(mode=0;mode<7;++mode) {
+        unsigned before=resumes;HANDLE heap=g_hHeap;stack_reads=0;
+        fail_stack_read_after=mode==0?1:0;short_stack_read_after=mode==1?1:0;
+        fail_stack_query=mode==2;bad_stack_region=mode>=3 && mode<=5?mode-2:0;
+        oversized_stack_region=mode==6;
+        require(MTH_Uninitialize()==MTH_ERROR_MEMORY_PROTECT,"incomplete split-stack scan refuses retirement");
+        require(g_hHeap==heap && g_pMemoryBlocks!=NULL && !HasRetainedThreadOwnership() && resumes==before+1,
+            "split-stack read/query/protection/budget failure retains storage and repays suspension");
+        require(stack_reads==(mode<=1?2:mode==6?0:1),"split-stack failure occurs at its exact read or region boundary");
+    }
+    fail_stack_read_after=short_stack_read_after=0;fail_stack_query=oversized_stack_region=FALSE;
+    bad_stack_region=0;peer_stack_split=0;finish();
+}
+
 static void partial_block_retirement(void) {
     HANDLE owner;unsigned i;setup();
     for(i=0;i<MEMORY_BLOCK_SIZE/MEMORY_SLOT_SIZE+6;++i)create_at(i*32);
@@ -360,7 +433,8 @@ int main(int argc,char** argv) {
     if(!strcmp(mode,"partial-disable"))partial_disable(FALSE);
     if(!strcmp(mode,"late-peer"))late_birth(FALSE);
     if(!strcmp(mode,"unused-slot"))unused_slot_retirement();
-    if(!strcmp(mode,"all")){partial_batch();partial_disable(FALSE);partial_disable(TRUE);single_disable_refusal();repair_failure(FALSE);repair_failure(TRUE);late_birth(FALSE);late_birth(TRUE);partial_preparation();stack_failures();patch_above_pages();partial_block_retirement();unused_slot_retirement();slot_ownership_lifecycle();}
+    if(!strcmp(mode,"unaligned-stack"))unaligned_stack_retirement();
+    if(!strcmp(mode,"all")){partial_batch();partial_disable(FALSE);partial_disable(TRUE);single_disable_refusal();repair_failure(FALSE);repair_failure(TRUE);late_birth(FALSE);late_birth(TRUE);partial_preparation();stack_failures();patch_above_pages();partial_block_retirement();unused_slot_retirement();slot_ownership_lifecycle();unaligned_stack_retirement();segmented_stack_failures();}
     require(checks!=0,"known completion test mode required");
     printf("PASS: %u completion, control-flow, retirement and page checks (projected peers)\n",checks);
     return 0;

@@ -488,7 +488,8 @@ static PEER_PREPARATION_RESULT CheckRetiringThread(HANDLE thread)
     CONTEXT context;
     MEMORY_BASIC_INFORMATION first;
     ULONG_PTR cursor, allocation;
-    SIZE_T scanned = 0;
+    SIZE_T scanned = 0, carried = 0;
+    BYTE stackBytes[64 * sizeof(DWORD_PTR) + sizeof(DWORD_PTR) - 1];
     DWORD_PTR registers[17];
     UINT i, count;
     context.ContextFlags = CONTEXT_FULL;
@@ -530,15 +531,25 @@ static PEER_PREPARATION_RESULT CheckRetiringThread(HANDLE thread)
             return PEER_UNRESOLVED;
         while (cursor < limit)
         {
-            DWORD_PTR words[64];
-            SIZE_T copied = 0, bytes = limit - cursor;
-            if (bytes > sizeof(words)) bytes = sizeof(words);
-            if (bytes % sizeof(words[0]) != 0 ||
-                !ReadProcessMemory(GetCurrentProcess(), (LPCVOID)cursor, words, bytes, &copied) || copied != bytes)
+            SIZE_T copied = 0, bytes = limit - cursor, available, offset;
+            if (bytes > 64 * sizeof(DWORD_PTR)) bytes = 64 * sizeof(DWORD_PTR);
+            if (!ReadProcessMemory(GetCurrentProcess(), (LPCVOID)cursor,
+                    stackBytes + carried, bytes, &copied) || copied != bytes)
                 return PEER_UNRESOLVED;
-            for (i = 0; i < bytes / sizeof(words[0]); ++i)
-                if (IsRetiringAddress(words[i]))
+            available = carried + bytes;
+            /* Packed/byte-buffer owners are valid pointers too. Inspect every
+             * complete window without making an aligned C pointer access. */
+            for (offset = 0; offset + sizeof(DWORD_PTR) <= available; ++offset)
+            {
+                DWORD_PTR candidate;
+                memcpy(&candidate, stackBytes + offset, sizeof(candidate));
+                if (IsRetiringAddress(candidate))
                     return PEER_UNRESOLVED;
+            }
+            /* Keep overlap across reads AND adjacent readable regions of the
+             * same stack allocation. Count only newly read bytes in the budget. */
+            carried = available < sizeof(DWORD_PTR) - 1 ? available : sizeof(DWORD_PTR) - 1;
+            memmove(stackBytes, stackBytes + available - carried, carried);
             cursor += bytes;
             scanned += bytes;
         }

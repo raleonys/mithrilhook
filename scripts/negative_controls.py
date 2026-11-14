@@ -47,6 +47,7 @@ TRAMPOLINE_CONTROLS={'internal-call':'FAIL: internal CALL refuses before origina
  'transition':'FAIL: transition instruction refuses before original publication',
  'undefined-trap':'FAIL: undefined trap refuses before original publication'}
 BUFFER_ORACLE='FAIL: unused slot and header values do not block whole-engine retirement'
+STACK_ORACLE='FAIL: unaligned stack owner blocks removal before release'
 def prepare(output):
  output=Path(output).resolve()
  if not output.is_relative_to((ROOT/'build').resolve()):
@@ -56,6 +57,10 @@ def prepare(output):
  if hashlib.sha256((ROOT/'src/hook.c').read_bytes()).hexdigest()!=expected:
   raise ValueError('Control source does not match the reviewed inventory')
  output.mkdir(parents=True,exist_ok=True)
+ stepping='for (offset = 0; offset + sizeof(DWORD_PTR) <= available; ++offset)'
+ if source.count(stepping)!=1:raise ValueError('Missing unique byte-window stack scan')
+ (output/'unaligned-stack.c').write_text(source.replace(stepping,stepping.replace('++offset','offset += sizeof(DWORD_PTR)'),1))
+
  buffer=(ROOT/'src/buffer.c').read_text()
  expected_buffer=json.loads((ROOT/'metadata/SOURCE_MANIFEST.json').read_text())['files']['src/buffer.c']
  if hashlib.sha256((ROOT/'src/buffer.c').read_bytes()).hexdigest()!=expected_buffer:
@@ -104,7 +109,7 @@ def run(mode,command):
   if result.returncode!=42 or failures or 'SINGLE_DISABLE_IP_MISMATCH: real IP retained the trampoline/relay address' not in lines or 'REAL_PEER_CLEANUP: PASS original context restored, worker joined, handle count restored' not in lines:
    raise RuntimeError('Stale-action control did not prove the precise mismatch and complete cleanup')
   print('PASS: exact negative control stale, complete cleanup');return
- expected=BUFFER_ORACLE if mode=='unused-slot' else TRAMPOLINE_CONTROLS[mode] if mode in TRAMPOLINE_CONTROLS else EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
+ expected=STACK_ORACLE if mode=='unaligned-stack' else BUFFER_ORACLE if mode=='unused-slot' else TRAMPOLINE_CONTROLS[mode] if mode in TRAMPOLINE_CONTROLS else EXTRA[mode][2] if mode in EXTRA else CASES[mode][1]
  if result.returncode!=1 or failures!=[expected]:
   raise RuntimeError('Control did not fail only at its required assertion: '+mode)
  print('PASS: exact negative control '+mode)
@@ -112,7 +117,7 @@ def main():
  parser=argparse.ArgumentParser(description=__doc__)
  sub=parser.add_subparsers(dest='operation',required=True)
  p=sub.add_parser('prepare');p.add_argument('--output',required=True)
- p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,*TRAMPOLINE_CONTROLS,"stale","unused-slot"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
+ p=sub.add_parser('run');p.add_argument('--mode',choices=[*CASES,*EXTRA,*TRAMPOLINE_CONTROLS,"stale","unused-slot","unaligned-stack"],required=True);p.add_argument('command',nargs=argparse.REMAINDER)
  args=parser.parse_args()
  if args.operation=='prepare':prepare(args.output)
  else:
