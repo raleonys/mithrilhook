@@ -7,8 +7,8 @@
 **Distribution license: [GPL-3.0-only](LICENSE).** Original third-party notices
 are retained separately; they are not alternative licenses for the complete fork.
 
-**Version: 1.0.4.** The canonical version is in [VERSION](VERSION).
-CMake, installed packages and DLL resources use 1.0.4 without a prerelease
+**Version: 1.0.5.** The canonical source version is in [VERSION](VERSION).
+CMake, installed packages and DLL resources use 1.0.5 without a prerelease
 suffix or prerelease opt-in. See [Release and packages](docs/RELEASE.md).
 
 MithrilHook is an independently maintained Windows x86/x64 function-hooking
@@ -21,7 +21,9 @@ instruction relocation. **It is not a production acceptance or universal
 unload-safety guarantee.** See [Safety](docs/SAFETY.md) and the exact results in
 [Validation](docs/VALIDATION.md).
 
-The 1.0.4 release includes the reviewed relocation, thread/batch, unwind,
+The 1.0.5 source adds explicit page-offset and diagnostic argument types to the
+reviewed 1.0.4 baseline. Publication follows PR #25 integration and validation.
+The published 1.0.4 release includes the reviewed relocation, thread/batch, unwind,
 undefined-trap and generated-code retirement corrections through PR #23.
 Download the [official release](https://github.com/raleonys/mithrilhook/releases/tag/v1.0.4)
 for seven Windows packages, the matching source archive, changelog and validation
@@ -75,7 +77,7 @@ selection is needed. The CMake target is `MithrilHook::mithrilhook` and the
 installed package is `MithrilHook`.
 
 ```cmake
-find_package(MithrilHook 1.0.4 EXACT CONFIG REQUIRED)
+find_package(MithrilHook 1.0.5 EXACT CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE MithrilHook::mithrilhook)
 ```
 

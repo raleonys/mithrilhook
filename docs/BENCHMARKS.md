@@ -20,7 +20,15 @@ MinHook-Detours, nor call-through latency. Its original safety/workload limits
 remain; values are not transferred to the new fork. Citrine's runtime-load
 benchmark uses `install_hooks=false` and cannot rank hook engines either.
 
-## 1.0.4 release evidence
+## 1.0.5 release evidence
+
+The 1.0.5 comparison must be generated and audited against the final selected
+source. PR #25 changes page-offset arithmetic and diagnostic types; earlier
+measurements are not relabeled as results for these bytes. Current runs are
+available through the workflow above; a completed exact-head run and its
+artifacts are required for the release review.
+
+## Published 1.0.4 release evidence
 
 The release includes the unaligned-stack retirement correction and all reviewed
 changes through PR #23. Its fresh exact-source measurements and independently

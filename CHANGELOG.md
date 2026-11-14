@@ -3,13 +3,19 @@
 VERSION is the canonical distribution version. This history groups changes
 by their resulting behavior and links the implementing pull requests.
 
-## Unreleased
+## [1.0.5] — Unreleased
 
 - Use pointer-width arithmetic for the patch page offset before adding it to
   the page base. Preserve the existing one-or-two-page completion bound.
 - Convert DWORD diagnostics explicitly to unsigned long for their existing
   `%lu` fields, retaining native Windows output and matching portable analysis
   types without changing the JSON schema or teardown diagnostic fields.
+- Report the exact operation, session, cycle, MithrilHook status and Win32 error
+  when an active-caller stress transition fails. Preserve strict failure
+  assertions and the 250-process stress budget.
+- Set the stable source/package/resource version and exact installed-consumer
+  requests to 1.0.5. Publication follows owner integration and fresh validation;
+  prior release and benchmark evidence retain their original source identities.
 
 ## [1.0.4] — 2026-11-14
 

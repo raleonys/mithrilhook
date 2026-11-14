@@ -2,7 +2,10 @@
 
 ## Version and exact source identity
 
-**Distribution version: 1.0.4.** The release includes all corrections through
+**Distribution version: 1.0.5.** This source targets the next stable patch release.
+Its native, installed-package and benchmark results must identify the exact
+1.0.5 commit; publication depends on their review. The existing published
+1.0.4 release includes all corrections through
 PR #23. The exact tag/commit/tree, fresh native and benchmark workflow runs,
 artifact hashes and independent audit results are recorded in the published
 [1.0.4 validation asset](https://github.com/raleonys/mithrilhook/releases/download/v1.0.4/MithrilHook-1.0.4-VALIDATION.json).
@@ -34,9 +37,9 @@ the exact refusal assertion. Word-PUSH
 range checks are structural; the registered native execution/unwind fixture
 uses ABI-describable eight-byte stack allocations.
 
-For 1.0.4 each installed consumer leaves prerelease consent disabled, accepts
-exact 1.0.4 and compatible 1.0 requests, rejects major 2, and verifies full/numeric
-metadata before linking and running.
+The 1.0.5 installed-consumer checks leave prerelease consent disabled, require
+exact 1.0.5 and compatible 1.0 requests, reject major 2, and verify full/numeric
+metadata before linking and running. Their results belong to the selected head.
 Shared builds verify thirteen exact exports, product identity, numeric/full
 version resources and a clear prerelease flag against VERSION.
 
