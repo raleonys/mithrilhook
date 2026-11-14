@@ -56,8 +56,8 @@ jobs:
           for line in Path('build/native/Testing/Temporary/LastTest.log').read_text(errors='replace').splitlines():
               if line.startswith(('TARGET_PROBE', 'TARGET_COMPARISON', 'UNWIND_TARGET')):
                   print(line)
-      - name: Diagnose Win32 shared live-call teardown across independent processes
-        if: matrix.arch == 'Win32' && matrix.config == 'Release' && matrix.shared == 'ON'
+      - name: Diagnose shared live-call teardown across independent processes
+        if: matrix.config == 'Release' && matrix.shared == 'ON'
         shell: python
         run: |
           import hashlib,json,subprocess
